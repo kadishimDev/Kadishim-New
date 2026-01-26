@@ -6,6 +6,7 @@ import menuData from '../data/menu_structure.json';
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [expandedMobile, setExpandedMobile] = useState({}); // Track expanded items by name/key
     const location = useLocation();
 
     useEffect(() => {
@@ -158,51 +159,107 @@ const Navbar = () => {
                 <div className={`fixed inset-0 bg-white z-40 transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                     <div className="h-full overflow-y-auto pt-24 px-6 text-dark text-center pb-10">
                         <div className="flex flex-col gap-6">
-                            {menuItems.map((category) => (
-                                <div key={category.title}>
-                                    <h3 className="font-bold text-xl text-primary mb-3">
-                                        {category.path !== '#' ? (
-                                            <Link to={category.path} onClick={() => setIsOpen(false)}>{category.title}</Link>
-                                        ) : category.title}
-                                    </h3>
-                                    <div className="flex flex-col gap-3">
-                                        {category.items && category.items.map(item => (
-                                            item.items ? (
-                                                <div key={item.name} className="bg-gray-50 p-3 rounded-lg">
-                                                    <div className="font-bold mb-2">{item.name}</div>
-                                                    {item.items.map(sub => (
-                                                        sub.items ? (
-                                                            /* Level 3 with children (Nusach) */
-                                                            <div key={sub.name} className="my-2 mr-2 border-r-2 border-gray-100 pr-3">
-                                                                <div className="font-medium text-gray-500 text-sm mb-1">{sub.name}</div>
-                                                                {sub.items.map(deep => (
-                                                                    <Link
-                                                                        key={deep.name}
-                                                                        to={deep.path}
-                                                                        onClick={() => setIsOpen(false)}
-                                                                        className="block py-1 text-sm text-gray-400 hover:text-primary transition-colors"
-                                                                    >
-                                                                        {deep.name}
-                                                                    </Link>
-                                                                ))}
+                            {menuItems.map((category) => {
+                                const isExpanded = expandedMobile[category.title];
+                                const hasSubItems = category.items && category.items.length > 0;
+
+                                return (
+                                    <div key={category.title} className="text-right border-b border-gray-50 pb-4">
+                                        <div className="flex justify-between items-center mb-2">
+                                            {hasSubItems ? (
+                                                <button
+                                                    onClick={() => setExpandedMobile(prev => ({ ...prev, [category.title]: !prev[category.title] }))}
+                                                    className="font-bold text-xl text-primary flex justify-between items-center w-full"
+                                                >
+                                                    {category.title}
+                                                    <ChevronDown size={20} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                </button>
+                                            ) : (
+                                                <Link
+                                                    to={category.path}
+                                                    onClick={() => setIsOpen(false)}
+                                                    className="font-bold text-xl text-primary block w-full"
+                                                >
+                                                    {category.title}
+                                                </Link>
+                                            )}
+                                        </div>
+
+                                        {/* Level 1 Sub Menu */}
+                                        <div className={`flex flex-col gap-3 mr-2 border-r-2 border-gray-100 pr-4 transition-all overflow-hidden ${isExpanded ? 'active' : 'hidden'}`}>
+                                            {category.items && category.items.map(item => {
+                                                const subKey = `${category.title}-${item.name}`;
+                                                const isSubExpanded = expandedMobile[subKey];
+                                                const hasDeepItems = item.items && item.items.length > 0;
+
+                                                return (
+                                                    <div key={item.name}>
+                                                        {hasDeepItems ? (
+                                                            <div className="mb-2">
+                                                                <button
+                                                                    onClick={() => setExpandedMobile(prev => ({ ...prev, [subKey]: !prev[subKey] }))}
+                                                                    className="font-bold text-lg text-gray-800 flex justify-between items-center w-full"
+                                                                >
+                                                                    {item.name}
+                                                                    <ChevronDown size={16} className={`text-gray-400 transition-transform ${isSubExpanded ? 'rotate-180' : ''}`} />
+                                                                </button>
+
+                                                                {/* Level 2 Sub Menu */}
+                                                                <div className={`mt-2 flex flex-col gap-2 mr-2 pr-2 ${isSubExpanded ? 'active' : 'hidden'}`}>
+                                                                    {item.items.map(sub => (
+                                                                        sub.items ? (
+                                                                            <div key={sub.name}>
+                                                                                <div className="font-bold text-sm text-gray-500 mb-1">{sub.name}</div>
+                                                                                <div className="mr-2 border-r border-gray-200 pr-2 flex flex-col gap-2">
+                                                                                    {sub.items.map(deep => (
+                                                                                        <Link
+                                                                                            key={deep.name}
+                                                                                            to={deep.path}
+                                                                                            onClick={() => setIsOpen(false)}
+                                                                                            className="block text-sm text-gray-600 active:text-primary py-1"
+                                                                                        >
+                                                                                            {deep.name}
+                                                                                        </Link>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <Link
+                                                                                key={sub.name}
+                                                                                to={sub.path}
+                                                                                onClick={() => setIsOpen(false)}
+                                                                                className="block text-gray-600 py-1 hover:text-primary"
+                                                                            >
+                                                                                {sub.name}
+                                                                            </Link>
+                                                                        )
+                                                                    ))}
+                                                                </div>
                                                             </div>
                                                         ) : (
-                                                            /* Standard Level 2/3 Link */
-                                                            <Link key={sub.name} to={sub.path} onClick={() => setIsOpen(false)} className="block py-1 text-sm text-gray-600 hover:text-primary">
-                                                                {sub.name}
+                                                            <Link
+                                                                to={item.path}
+                                                                onClick={() => setIsOpen(false)}
+                                                                className="block text-lg text-gray-700 hover:text-primary"
+                                                            >
+                                                                {item.name}
                                                             </Link>
-                                                        )
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <Link key={item.name} to={item.path} onClick={() => setIsOpen(false)} className="block text-lg text-gray-700">
-                                                    {item.name}
-                                                </Link>
-                                            )
-                                        ))}
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
+
+                            <Link
+                                to="/request"
+                                onClick={() => setIsOpen(false)}
+                                className="mt-4 w-full bg-primary text-dark font-bold py-4 rounded-xl shadow-lg hover:bg-yellow-400 text-center"
+                            >
+                                שליחת בקשה לקדיש
+                            </Link>
                         </div>
                     </div>
                 </div>
