@@ -76,10 +76,24 @@ const Admin = () => {
         // 2. Sort
         if (sortConfig.key) {
             data.sort((a, b) => {
-                if (a[sortConfig.key] < b[sortConfig.key]) {
+                let aVal = a[sortConfig.key];
+                let bVal = b[sortConfig.key];
+
+                // Special handling for Key "date"
+                if (sortConfig.key === 'date') {
+                    // Start with Gregorian because it's sortable
+                    aVal = a.gregorian_date || a.hebrew_date_text || '';
+                    bVal = b.gregorian_date || b.hebrew_date_text || '';
+
+                    // If both are dates, try to parse them (assuming YYYY-MM-DD or simple string)
+                    // If strict Hebrew only, we rely on string comparison which is imperfect but better than nothing
+                    // Ideally we'd use hDate value
+                }
+
+                if (aVal < bVal) {
                     return sortConfig.direction === 'asc' ? -1 : 1;
                 }
-                if (a[sortConfig.key] > b[sortConfig.key]) {
+                if (aVal > bVal) {
                     return sortConfig.direction === 'asc' ? 1 : -1;
                 }
                 return 0;
@@ -234,7 +248,12 @@ const Admin = () => {
                                     >
                                         שם מלא {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
-                                    <th className="p-5 font-bold">תאריך פטירה / אזכרה</th>
+                                    <th
+                                        className="p-5 font-bold cursor-pointer hover:bg-gray-100"
+                                        onClick={() => requestSort('date')}
+                                    >
+                                        תאריך פטירה / אזכרה {sortConfig.key === 'date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                    </th>
                                     <th className="p-5 font-bold">סוג הנצחה</th>
                                     <th className="p-5 font-bold w-24">פעולות</th>
                                 </tr>
