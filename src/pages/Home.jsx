@@ -43,10 +43,10 @@ const Home = () => {
 
                 <div className="container mx-auto px-6 relative z-10 text-center text-white mt-16">
                     <div className="inline-block mb-4 px-4 py-1.5 border border-orange-500/30 rounded-full bg-black/30 backdrop-blur-sm text-orange-400 text-sm font-medium tracking-wide animate-fade-in-up">
-                        מיסודו של הרב משה בן-טוב זצוק"ל
+                        שמופעל על ידיי ארגון "תורת משה" | מיסודו של הרב משה בן-טוב זצוק"ל
                     </div>
                     <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight animate-fade-in-up animation-delay-200 drop-shadow-2xl">
-                        אתר <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-orange-400 to-red-500">קדישים</span>
+                        אתר <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-orange-400 to-red-500">"קדישים"</span>
                     </h1>
                     <p className="text-xl md:text-2xl text-gray-200 mb-10 max-w-2xl mx-auto font-light leading-relaxed animate-fade-in-up animation-delay-400 drop-shadow-md">
                         מפעלי חסד והנצחה, לימוד תורה ואמירת קדיש לעילוי נשמת יקיריכם.
