@@ -25,31 +25,53 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
 
     // Navigation
     const changeMonth = (delta) => {
-        // Simple approx month change by adding/subtracting 29 days and resetting to 1st
-        // This avoids edge cases with HDate month arithmetic
         const currentAbs = currentHDate.abs();
         const newAbs = currentAbs + (delta * 29);
         const newDate = new HDate(newAbs);
         setCurrentHDate(new HDate(1, newDate.getMonth(), newDate.getFullYear()));
     };
 
+    // Helper: Normalize Hebrew text for fuzzy comparison
+    // Removes quotes, gershayim, and leading 'b' (ב) from months if present
+    const normalizeHebrew = (text) => {
+        if (!text) return '';
+        return text
+            .replace(/['"]/g, '') // Remove quotes
+            .replace(/\s+/g, ' ') // Collapse spaces
+            .trim();
+    };
+
     // Filter Kaddish names for a specific Hebrew Date
     const getNamesForDate = (hDate) => {
-        // HDate.render('he') produces "ה' באייר תשפד"
-        // We want to match "ה' באייר"
-        const dateStr = hDate.render('he');
-        const dayMonth = dateStr.split(' ').slice(0, 2).join(' '); // "ה' באייר"
+        const day = hDate.getDate();
+        const monthName = hDate.getMonthName('h'); // e.g., "ניסן"
+
+        // Construct variations: "כה ניסן", "כה בניסן"
+        // We compare normalized versions
+        const dayGeo = gematriya(day).replace(/['"]/g, ''); // "כה"
+        const monthClean = monthName.replace(/['"]/g, ''); // "ניסן"
+
+        // Possible patterns in DB: "כ״ה בניסן", "כה ניסן", "כ'ה בשבט"
+        const searchTerms = [
+            `${dayGeo} ${monthClean}`,     // "כה ניסן"
+            `${dayGeo} ב${monthClean}`,    // "כה בניסן"
+        ];
 
         return kaddishList.filter(item => {
-            // Check legacy text match
-            if (item.hebrew_date_text && item.hebrew_date_text.includes(dayMonth)) return true;
-
-            // Check structured date match if available
+            // 1. Structured Match (Best)
             if (item.hebrew_date &&
-                item.hebrew_date.day === hDate.getDate() &&
+                item.hebrew_date.day === day &&
                 item.hebrew_date.month === hDate.getMonth()) {
                 return true;
             }
+
+            // 2. Fuzzy Text Match
+            if (item.hebrew_date_text) {
+                const normalizedItem = normalizeHebrew(item.hebrew_date_text);
+                // Check if our day+month patterns exist in the item text
+                return searchTerms.some(term => normalizedItem.includes(term));
+            }
+
             return false;
         });
     };
@@ -79,6 +101,9 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
                         const isToday = day.isSameDate(new HDate());
                         const isSelected = day.isSameDate(selectedDate);
 
+                        // Render strictly the day letters, no year
+                        const dayLabel = gematriya(day.getDate());
+
                         return (
                             <div
                                 key={idx}
@@ -89,8 +114,8 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
                                         isToday ? 'border-gray-300 bg-gray-50' : 'border-gray-100 hover:border-primary/50 hover:shadow-md'}
                                 `}
                             >
-                                <span className={`font-bold ${isSelected ? 'text-primary' : 'text-gray-700'}`}>
-                                    {day.renderGematriya()}
+                                <span className={`text-sm ${isSelected ? 'text-primary font-medium' : 'text-gray-700'}`}>
+                                    {dayLabel}
                                 </span>
 
                                 {names.length > 0 && (
@@ -109,7 +134,7 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
             {/* Selected Day View */}
             <div className="md:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
                 <h3 className="text-lg font-bold border-b border-gray-100 pb-4 mb-4">
-                    אזכרות ליום {selectedDate.renderGematriya()}
+                    אזכרות ליום {gematriya(selectedDate.getDate())} ב{selectedDate.getMonthName('h')}
                     <span className="block text-sm text-gray-400 font-normal mt-1">{selectedDate.render('he')}</span>
                 </h3>
 
