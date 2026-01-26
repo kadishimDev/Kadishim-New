@@ -46,7 +46,7 @@ const Home = () => {
                         מיסודו של הרב משה בן-טוב זצוק"ל
                     </div>
                     <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight animate-fade-in-up animation-delay-200 drop-shadow-2xl">
-                        ארגון <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-orange-400 to-red-500">"תורת משה"</span>
+                        אתר <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-orange-400 to-red-500">קדישים</span>
                     </h1>
                     <p className="text-xl md:text-2xl text-gray-200 mb-10 max-w-2xl mx-auto font-light leading-relaxed animate-fade-in-up animation-delay-400 drop-shadow-md">
                         מפעלי חסד והנצחה, לימוד תורה ואמירת קדיש לעילוי נשמת יקיריכם.
