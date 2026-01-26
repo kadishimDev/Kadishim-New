@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Assistant', sans-serif;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    direction: rtl;
+    background-color: #ffffff;
+    color: #1a1a1a;
+  }
+}
+
+/* Custom Utilities */
+.glass-light {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.text-gradient-flame {
+  background: linear-gradient(to right, #F59E0B, #B45309);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
