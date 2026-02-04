@@ -14,11 +14,13 @@ import ScrollToTop from './components/ScrollToTop';
 const Layout = ({ children }) => {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
+  const isHome = location.pathname === '/';
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {!isAdmin && <Navbar />}
-      <main className={`flex-grow ${!isAdmin ? 'pt-24' : ''}`}>
+      {/* Remove pt-24 on Home to allow Hero to sit behind transparent Navbar */}
+      <main className={`flex-grow ${!isAdmin && !isHome ? 'pt-24' : ''}`}>
         {children}
       </main>
       {!isAdmin && <Footer />}
