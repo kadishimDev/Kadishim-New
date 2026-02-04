@@ -122,33 +122,60 @@ const RequestKaddish = () => {
                             <InputGroup label="שם האם" name="mother_name" placeholder="למשל: שרה" onChange={handleChange} required />
                         </div>
 
-                        <div className="bg-yellow-50 p-6 rounded-xl border border-yellow-100 space-y-4">
-                            <div className="flex items-center gap-4 mb-2">
-                                <Calendar className="text-primary" />
-                                <h4 className="font-bold text-dark">תאריך הפטירה</h4>
+                        {/* Extra Details */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <InputGroup label="מקום מגורים (עיר)" name="memorial_residence" placeholder="למשל: ירושלים" onChange={handleChange} />
+                            <div className="md:col-span-1">
+                                <label className="block text-sm font-bold text-gray-700 mb-2">שמות הילדים (מופרד בפסיקים)</label>
+                                <textarea name="memorial_children" onChange={handleChange} rows="1" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:border-primary outline-none resize-none" placeholder="משה, דוד, רות..."></textarea>
+                            </div>
+                        </div>
+
+                        {/* Dates Section */}
+                        <div className="bg-yellow-50 p-6 rounded-xl border border-yellow-100 space-y-6">
+                            <h4 className="font-bold text-dark text-lg border-b border-yellow-200 pb-2">תאריכים חשובים</h4>
+
+                            {/* Death Date */}
+                            <div>
+                                <h5 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><Calendar size={18} /> תאריך פטירה (חובה להזין לפחות אחד)</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                        <label className="text-sm font-bold text-gray-500 mb-2 block">תאריך עברי</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <input type="number" name="hebrew_death_day" placeholder="יום" className="p-2 border rounded text-center w-full" onChange={handleChange} />
+                                            <input type="text" name="hebrew_death_month" placeholder="חודש" className="p-2 border rounded text-center w-full" onChange={handleChange} />
+                                            <input type="text" name="hebrew_death_year" placeholder="שנה" className="p-2 border rounded text-center w-full" onChange={handleChange} />
+                                        </div>
+                                        <label className="flex items-center gap-2 text-xs text-gray-500 mt-2 cursor-pointer">
+                                            <input type="checkbox" name="death_after_sunset" onChange={handleChange} className="rounded text-primary" />
+                                            נפטר לאחר השקיעה?
+                                        </label>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                        <label className="text-sm font-bold text-gray-500 mb-2 block">תאריך לועזי</label>
+                                        <input type="date" name="gregorian_death_date" className="p-2 border rounded w-full" onChange={handleChange} />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="flex gap-6">
-                                <label className="inline-flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="calendar_type" value="hebrew" checked={formData.calendar_type === 'hebrew'} onChange={handleChange} className="text-primary focus:ring-primary" />
-                                    <span>תאריך עברי</span>
-                                </label>
-                                <label className="inline-flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="calendar_type" value="gregorian" checked={formData.calendar_type === 'gregorian'} onChange={handleChange} className="text-primary focus:ring-primary" />
-                                    <span>תאריך לועזי</span>
-                                </label>
+                            {/* Birth Date (Optional) */}
+                            <div>
+                                <h5 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><Calendar size={18} /> תאריך לידה (אופציונלי)</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                        <label className="text-sm font-bold text-gray-500 mb-2 block">תאריך עברי</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <input type="number" name="hebrew_birth_day" placeholder="יום" className="p-2 border rounded text-center w-full" onChange={handleChange} />
+                                            <input type="text" name="hebrew_birth_month" placeholder="חודש" className="p-2 border rounded text-center w-full" onChange={handleChange} />
+                                            <input type="text" name="hebrew_birth_year" placeholder="שנה" className="p-2 border rounded text-center w-full" onChange={handleChange} />
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                        <label className="text-sm font-bold text-gray-500 mb-2 block">תאריך לועזי</label>
+                                        <input type="date" name="gregorian_birth_date" className="p-2 border rounded w-full" onChange={handleChange} />
+                                    </div>
+                                </div>
                             </div>
-
-                            <div className="grid grid-cols-3 gap-4 max-w-md">
-                                <input type="number" name="death_date_day" placeholder="יום" required className="p-3 border rounded-lg text-center" onChange={handleChange} min="1" max="31" />
-                                <input type="text" name="death_date_month" placeholder="חודש" required className="p-3 border rounded-lg text-center" onChange={handleChange} />
-                                <input type="number" name="death_date_year" placeholder="שנה" required className="p-3 border rounded-lg text-center" onChange={handleChange} min="1900" />
-                            </div>
-
-                            <label className="flex items-center gap-2 text-sm text-gray-600 mt-2 cursor-pointer">
-                                <input type="checkbox" name="death_after_sunset" onChange={handleChange} className="rounded text-primary" />
-                                נפטר לאחר השקיעה? (משפיע על התאריך העברי)
-                            </label>
                         </div>
                     </div>
 

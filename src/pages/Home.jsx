@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Shield, BookOpen, Star, ArrowLeft, ChevronDown, CheckCircle } from 'lucide-react';
+import MemorialServiceGenerator from '../components/TehillimGenerator';
 
 const Home = () => {
 
@@ -155,6 +156,13 @@ const Home = () => {
 
                         </div>
                     </div>
+                </div>
+            </section>
+
+            {/* NEW: Memorial Service Generator Section */}
+            <section id="tehillim-generator" className="py-12 bg-gray-50">
+                <div className="container mx-auto px-4">
+                    <MemorialServiceGenerator />
                 </div>
             </section>
 
