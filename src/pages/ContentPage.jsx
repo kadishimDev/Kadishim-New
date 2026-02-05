@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { ChevronLeft } from 'lucide-react';
+import pagesData from '../data/pages_db.json';
+import ContactForm from '../components/ContactForm';
 
 const ContentPage = () => {
     const { slug } = useParams();
@@ -10,23 +12,57 @@ const ContentPage = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // In a real app, fetch from API based on slug
-        // Simulation:
-        const mockPages = [
-            { id: 1, title: 'אודות הארגון', slug: 'about', content: '<p>ארגון קדישים נוסד בשנת...</p>' },
-            { id: 2, title: 'תקנון', slug: 'terms', content: '<p>תנאי השימוש באתר...</p>' },
-            { id: 3, title: 'צור קשר', slug: 'contact', content: '<p>ניתן ליצור קשר בטלפון...</p>' }
-        ];
+        // Load page from local JSON DB
+        // Decode slug to handle Hebrew characters in URL
+        const decodedSlug = decodeURIComponent(slug);
+        const page = pagesData.find(p => p.slug === decodedSlug);
 
-        const page = mockPages.find(p => p.slug === slug);
-
-        // Simulating network delay
+        // Simulate network delay for smooth transition
         setTimeout(() => {
-            setPageData(page || { title: '404', content: 'הדף לא נמצא' });
+            if (page) {
+                setPageData(page);
+            } else {
+                setPageData({ title: '404', content: '<p class="text-center text-xl">הדף שאליו ניסית להגיע אינו קיים במערכת.</p>' });
+            }
             setLoading(false);
-        }, 500);
+        }, 300);
 
     }, [slug]);
+
+    // Helper to parse content and inject components
+    const renderContent = (htmlContent) => {
+        if (!htmlContent) return null;
+
+        // Check for [form] shortcode
+        if (htmlContent.includes('[form]')) {
+            const parts = htmlContent.split('[form]');
+            return (
+                <div>
+                    <div
+                        className="prose prose-lg max-w-none text-gray-700 leading-relaxed font-sans"
+                        dangerouslySetInnerHTML={{ __html: parts[0] }}
+                    ></div>
+
+                    <ContactForm />
+
+                    {parts[1] && (
+                        <div
+                            className="prose prose-lg max-w-none text-gray-700 leading-relaxed font-sans mt-8"
+                            dangerouslySetInnerHTML={{ __html: parts[1] }}
+                        ></div>
+                    )}
+                </div>
+            );
+        }
+
+        // Default rendering
+        return (
+            <div
+                className="prose prose-lg max-w-none text-gray-700 leading-relaxed font-sans"
+                dangerouslySetInnerHTML={{ __html: htmlContent }}
+            ></div>
+        );
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -49,10 +85,7 @@ const ContentPage = () => {
                             </Link>
                         </div>
 
-                        <div
-                            className="prose prose-lg max-w-none text-gray-700 leading-relaxed font-sans"
-                            dangerouslySetInnerHTML={{ __html: pageData.content }}
-                        ></div>
+                        {renderContent(pageData.content)}
                     </div>
                 )}
             </main>

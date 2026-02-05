@@ -15,10 +15,10 @@ describe('Admin Page User Simulation', () => {
 
         // 1. Verify Login Screen
         console.log("Step 1: Checking Login Screen...");
-        expect(screen.getByText(/ממשק ניהול מסווג/i)).toBeInTheDocument();
+        expect(screen.getByText(/ממשק ניהול מרכזי/i)).toBeInTheDocument();
 
-        // Find by Label: "סיסמת גישה"
-        const input = screen.getByLabelText(/סיסמת גישה/i);
+        // Find by Label: "סיסמת מערכת"
+        const input = screen.getByLabelText(/סיסמת מערכת/i);
         expect(input).toBeInTheDocument();
 
         // 2. Simulate User Typing Password
@@ -33,7 +33,7 @@ describe('Admin Page User Simulation', () => {
         // 4. Verify Dashboard Loaded
         console.log("Step 4: Verifying Dashboard...");
         await waitFor(() => {
-            expect(screen.getByText(/מאגר הנצחה וקדישים/i)).toBeInTheDocument();
+            expect(screen.getByText(/לוח בקרה/i)).toBeInTheDocument();
         });
 
         // 5. Verify Default Tab (Archive)

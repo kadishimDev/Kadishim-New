@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
 import RequestKaddish from './pages/RequestKaddish';
+import KaddishLibrary from './components/KaddishLibrary'; // New Component
 import Generators from './pages/Generators';
 import Admin from './pages/Admin';
 import ContentPage from './pages/ContentPage';
@@ -36,6 +37,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/request" element={<RequestKaddish />} />
+          <Route path="/kaddish-library" element={<KaddishLibrary />} />
           <Route path="/generators" element={<Generators />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/page/:slug" element={<ContentPage />} />

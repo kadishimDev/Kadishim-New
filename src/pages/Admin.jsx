@@ -59,8 +59,9 @@ const Admin = () => {
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">סיסמת מערכת</label>
+                            <label htmlFor="password-input" className="block text-sm font-bold text-gray-700 mb-1">סיסמת מערכת</label>
                             <input
+                                id="password-input"
                                 type="password"
                                 className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-primary outline-none transition-all"
                                 value={password}
