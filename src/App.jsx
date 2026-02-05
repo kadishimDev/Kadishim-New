@@ -11,6 +11,7 @@ import ContentPage from './pages/ContentPage';
 import ErrorBoundary from './components/ErrorBoundary';
 
 import ScrollToTop from './components/ScrollToTop';
+import ContactActions from './components/ContactActions';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -18,13 +19,14 @@ const Layout = ({ children }) => {
   const isHome = location.pathname === '/';
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-white font-sans">
       {!isAdmin && <Navbar />}
-      {/* Remove pt-24 on Home to allow Hero to sit behind transparent Navbar */}
-      <main className={`flex-grow ${!isAdmin && !isHome ? 'pt-24' : ''}`}>
+      {/* Increased padding to prevent Navbar overlap (header is tall) */}
+      <main className={`flex-grow`} style={{ paddingTop: !isAdmin && !isHome ? '160px' : '0' }}>
         {children}
       </main>
       {!isAdmin && <Footer />}
+      {!isAdmin && <ContactActions />}
     </div>
   );
 };

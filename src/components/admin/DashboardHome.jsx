@@ -2,8 +2,11 @@ import React, { useMemo } from 'react';
 import { Users, FileText, Calendar, TrendingUp } from 'lucide-react';
 import { formatHebrewDateSmart } from '../../utils/dateUtils';
 import { HDate } from '@hebcal/core';
+import DeceasedPopup from '../DeceasedPopup';
 
-const DashboardHome = ({ memorials, pages }) => {
+const DashboardHome = ({ memorials, pages, onUpdate }) => {
+    const [popupItem, setPopupItem] = React.useState(null); // Local state for popup
+
     // Stats
     const stats = useMemo(() => {
         const total = memorials.length;
@@ -37,7 +40,11 @@ const DashboardHome = ({ memorials, pages }) => {
                 <h3 className="font-bold text-gray-700 mb-4">נוספו לאחרונה</h3>
                 <div className="space-y-3">
                     {memorials.slice(0, 5).map(m => (
-                        <div key={m.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div
+                            key={m.id}
+                            onClick={() => setPopupItem(m)}
+                            className="flex justify-between items-center p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors"
+                        >
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
                                     {m.name.charAt(0)}
@@ -54,6 +61,13 @@ const DashboardHome = ({ memorials, pages }) => {
                     ))}
                 </div>
             </div>
+
+            {/* Popup */}
+            {popupItem && (
+                <div style={{ position: 'fixed', zIndex: 9999 }}> {/* Inline style fallback just in case, though component handles it */}
+                    <DeceasedPopup data={popupItem} onClose={() => setPopupItem(null)} onUpdate={onUpdate} />
+                </div>
+            )}
         </div>
     );
 };

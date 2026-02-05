@@ -85,20 +85,24 @@ const Admin = () => {
         );
     }
 
+    const handleUpdateMemorial = (updatedItem) => {
+        setMemorials(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+    };
+
     // Main Router Switch
     const renderContent = () => {
         switch (activeTab) {
             case 'dashboard':
-                return <DashboardHome memorials={memorials} pages={pages} />;
+                return <DashboardHome memorials={memorials} pages={pages} onUpdate={handleUpdateMemorial} />;
             case 'memorials':
-                return <MemorialsManager memorials={memorials} />;
+                return <MemorialsManager memorials={memorials} onUpdate={handleUpdateMemorial} />;
             case 'calendar':
                 // Full screen calendar widget
                 return (
                     <div className="animate-fade-in">
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 items-start">
                             <h2 className="text-2xl font-bold text-gray-800 mb-6">לוח שנה עברי - צפייה באזכרות</h2>
-                            <HebrewCalendarWidget kaddishList={memorials} />
+                            <HebrewCalendarWidget kaddishList={memorials} onUpdate={handleUpdateMemorial} />
                         </div>
                     </div>
                 );

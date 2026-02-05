@@ -170,10 +170,6 @@
     "path": "#",
     "items": [
       {
-        "name": "קדיש יתום",
-        "path": "/generators?tab=grave"
-      },
-      {
         "name": "פרקי תהילים לפי שם",
         "path": "/generators?tab=tehillim"
       },
@@ -182,7 +178,7 @@
         "path": "/generators?tab=mishnayot"
       },
       {
-        "name": "תפילה בבית העלמין",
+        "name": "סדר תפילה בבית העלמין",
         "path": "/generators?tab=grave"
       }
     ]

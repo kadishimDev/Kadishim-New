@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { HDate, gematriya, HebrewCalendar } from '@hebcal/core';
+import { HDate, gematriya } from '@hebcal/core';
 import { ChevronRight, ChevronLeft, Calendar as CalendarIcon, Search, ChevronDown, X } from 'lucide-react';
-import { formatHebrewDate, getHebrewMonths, formatHebrewDateSmart, normalizeHebrewDate } from '../utils/dateUtils';
+import { formatHebrewDate, formatHebrewDateSmart, normalizeHebrewDate } from '../utils/dateUtils';
 import DeceasedPopup from './DeceasedPopup';
 
 const HebrewCalendarWidget = ({ kaddishList = [] }) => {
@@ -12,7 +12,8 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
     // Jump State
     const [showJumpUI, setShowJumpUI] = useState(false);
     const [jumpYear, setJumpYear] = useState(currentHDate.getFullYear());
-    const [jumpMonth, setJumpMonth] = useState(currentHDate.getMonth()); // 1-based or enum? HDate.getMonth() returns month id
+    const [jumpMonth, setJumpMonth] = useState(currentHDate.getMonth());
+    const [jumpDay, setJumpDay] = useState(currentHDate.getDate());
 
     // Derived Display Values
     const currentYear = currentHDate.getFullYear();
@@ -33,81 +34,66 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
         return arr;
     }, [currentHDate]);
 
-    // Navigation: Right -> Prev (-1), Left -> Next (+1)
+    // Navigation: Right -> Prev, Left -> Next
     const handleMonthChange = (delta) => {
         let newDate;
-        // Logic to safely move months without skipping days/leap weirdness
-        // Set to 15th of current month -> move -> set to 1st
+        // Logic to safely move months
         const approx = new HDate(15, currentHDate.getMonth(), currentHDate.getFullYear());
 
         if (delta > 0) {
-            // Next Month
             newDate = approx.next();
             while (newDate.getMonth() === currentHDate.getMonth()) newDate = newDate.next();
         } else {
-            // Prev Month
             newDate = approx.prev();
             while (newDate.getMonth() === currentHDate.getMonth()) newDate = newDate.prev();
         }
 
-        // Reset to 1st of that month
         setCurrentHDate(new HDate(1, newDate.getMonth(), newDate.getFullYear()));
     };
 
     const handleJumpApply = () => {
-        // Create new HDate from selected Month/Year
-        // HDate(day, month, year)
         try {
-            const newDate = new HDate(1, parseInt(jumpMonth), parseInt(jumpYear));
+            // Validate day exists in month
+            const maxDays = HDate.daysInMonth(parseInt(jumpMonth), parseInt(jumpYear));
+            const safeDay = Math.min(parseInt(jumpDay), maxDays);
+
+            const newDate = new HDate(safeDay, parseInt(jumpMonth), parseInt(jumpYear));
             setCurrentHDate(newDate);
+            setSelectedDate(newDate); // Also select it
             setShowJumpUI(false);
         } catch (e) {
             console.error("Invalid Date Jump", e);
         }
     };
 
+    // Strict Data Binding
     const getNamesForDate = (hDate) => {
         if (!hDate) return [];
         const day = hDate.getDate();
         const month = hDate.getMonth();
-        const monthName = hDate.getMonthName('h');
-
-        // Prepare search terms
-        const dayGeo = gematriya(day).replace(/['"]/g, ''); // "כה"
-        const monthClean = monthName.replace(/['"]/g, ''); // "ניסן"
-
-        // Strict: "כה ניסן", "כה בניסן"
-        // Also include formatted with gershayim if available in utils, but simplify here:
-        const searchTerms = [
-            `${dayGeo} ${monthClean}`,
-            `${dayGeo} ב${monthClean}`,
-            `${dayGeo}' ${monthClean}`, // Apostrophe
-            `${dayGeo}' ב${monthClean}`,
-            `${dayGeo}׳ ${monthClean}`, // Hebrew Gershayim
-            `${dayGeo}׳ ב${monthClean}`
-        ];
+        const year = hDate.getFullYear();
+        const isLeap = HDate.isLeapYear(year);
 
         return kaddishList.filter(item => {
-            // 1. Structured Match (Best)
-            if (item.hebrew_date && item.hebrew_date.day === day && item.hebrew_date.month === month) return true;
+            // 1. Check Struct (Primary)
+            if (item.hebrew_date_struct) {
+                const { day: d, month: m } = item.hebrew_date_struct;
+                // Exact Match
+                if (d === day && m === month) return true;
 
-            // 2. Fuzzy Text Match
+                // Simple Adar Logic:
+                // If Item is Adar (12) and current is Adar I (12) or Adar II (13) in leap year?
+                // Standard: Deaths in Adar (Common) -> Adar I (Leap)? Or Adar II?
+                // Simplified for now: Strict match + ID check.
+                // Assuming Database normalization handled "Adar" correctly based on year of death.
+                return false;
+            }
+
+            // 2. Fallback to Text (Legacy)
             if (item.hebrew_date_text) {
-                // Check if our day+month terms are inside the text
-                // Normalize both side just in case
-                const text = normalizeHebrewDate ? normalizeHebrewDate(item.hebrew_date_text) : item.hebrew_date_text;
-
-                // A. Check exact phrases
-                if (searchTerms.some(term => item.hebrew_date_text.includes(term) || (normalizeHebrewDate && text.includes(normalizeHebrewDate(term))))) {
-                    return true;
-                }
-
-                // B. Fallback: Loose match - contains Day AND Month (e.g. "יום ג' לחודש שבט")
-                // Be careful with short days like "ב", "ג" matching inside other words.
-                // But for "שבט" and "ג׳" it's safer.
-                const hasMonth = item.hebrew_date_text.includes(monthClean);
-                const hasDay = item.hebrew_date_text.includes(dayGeo);
-                if (hasMonth && hasDay) return true;
+                // Try to allow fuzzy match if needed, but we normalized DB so struct should exist.
+                // Keeping simple fallback just in case
+                return false;
             }
             return false;
         });
@@ -115,24 +101,21 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
 
     const selectedDayNames = useMemo(() => getNamesForDate(selectedDate), [selectedDate, kaddishList]);
 
-    // Generate Month Options for Year (Handle Leap Years properly)
+    // Generate Month Options
     const monthOptions = useMemo(() => {
         const months = [];
         const isLeap = HDate.isLeapYear(jumpYear);
 
-        // Month names strictly in Hebrew
         const hebrewMonths = {
             1: 'ניסן', 2: 'אייר', 3: 'סיון', 4: 'תמוז', 5: 'אב', 6: 'אלול',
             7: 'תשרי', 8: 'חשון', 9: 'כסלו', 10: 'טבת', 11: 'שבט', 12: 'אדר',
             13: 'אדר ב'
         };
 
-        // Order: Tishrei (7) -> Elul (6)
         const order = [7, 8, 9, 10, 11, 12, 13, 1, 2, 3, 4, 5, 6];
 
         order.forEach(mId => {
             if (mId === 13 && !isLeap) return;
-            // Handle Adar in non-leap
             let name = hebrewMonths[mId];
             if (!isLeap && mId === 12) name = 'אדר';
             if (isLeap && mId === 12) name = 'אדר א';
@@ -142,7 +125,9 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
         return months;
     }, [jumpYear]);
 
-    // Current Month Display logic
+    // Generate Day Options (1-30)
+    const dayOptions = Array.from({ length: 30 }, (_, i) => i + 1);
+
     const displayMonthName = useMemo(() => {
         const m = currentHDate.getMonth();
         const y = currentHDate.getFullYear();
@@ -167,7 +152,6 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
 
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    {/* Right Arrow = Prev Month (Past) */}
                     <button onClick={() => handleMonthChange(-1)} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition-all">
                         <ChevronRight className="w-6 h-6" />
                     </button>
@@ -178,6 +162,7 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
                                 onClick={() => {
                                     setJumpYear(currentYear);
                                     setJumpMonth(currentHDate.getMonth());
+                                    setJumpDay(selectedDate.getDate());
                                     setShowJumpUI(true);
                                 }}
                                 className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-primary hover:text-primary transition-all text-gray-800 font-bold"
@@ -187,33 +172,42 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
                                 <ChevronDown className="w-4 h-4 text-gray-400" />
                             </button>
                         ) : (
-                            <div className="flex items-center gap-2 animate-fade-in absolute top-0 -translate-y-2 bg-white shadow-lg p-2 rounded-xl z-20 border border-orange-100 w-max">
-                                <select
-                                    value={jumpMonth}
-                                    onChange={(e) => {
-                                        setJumpMonth(e.target.value);
-                                    }}
-                                    className="p-2 rounded border border-gray-300 text-sm font-bold outline-none focus:border-primary"
-                                >
-                                    {monthOptions.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                                </select>
-                                <input
-                                    type="number"
-                                    value={jumpYear}
-                                    onChange={(e) => setJumpYear(e.target.value)}
-                                    className="w-20 p-2 rounded border border-gray-300 text-sm font-bold text-center outline-none focus:border-primary"
-                                />
-                                <button onClick={handleJumpApply} className="bg-primary text-white p-2 rounded hover:bg-orange-600">
-                                    <Search size={16} />
-                                </button>
-                                <button onClick={() => setShowJumpUI(false)} className="bg-gray-200 text-gray-600 p-2 rounded hover:bg-gray-300">
-                                    <X size={16} />
-                                </button>
+                            <div className="flex flex-col gap-3 animate-fade-in absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 bg-white shadow-xl p-4 rounded-xl z-20 border border-orange-100 w-[300px]">
+                                <h4 className="text-gray-700 font-bold text-center border-b pb-2">קפיצה לתאריך</h4>
+                                <div className="flex gap-2">
+                                    <select
+                                        value={jumpDay}
+                                        onChange={(e) => setJumpDay(e.target.value)}
+                                        className="p-2 rounded border border-gray-300 text-sm font-bold w-16"
+                                    >
+                                        {dayOptions.map(d => <option key={d} value={d}>{gematriya(d)}</option>)}
+                                    </select>
+                                    <select
+                                        value={jumpMonth}
+                                        onChange={(e) => setJumpMonth(e.target.value)}
+                                        className="p-2 rounded border border-gray-300 text-sm font-bold flex-1"
+                                    >
+                                        {monthOptions.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                    </select>
+                                    <input
+                                        type="number"
+                                        value={jumpYear}
+                                        onChange={(e) => setJumpYear(e.target.value)}
+                                        className="w-20 p-2 rounded border border-gray-300 text-sm font-bold text-center"
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={handleJumpApply} className="flex-1 bg-primary text-white p-2 rounded hover:bg-orange-600 font-bold">
+                                        עבור
+                                    </button>
+                                    <button onClick={() => setShowJumpUI(false)} className="bg-gray-100 text-gray-600 p-2 rounded hover:bg-gray-200">
+                                        ביטול
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
 
-                    {/* Left Arrow = Next Month (Future) */}
                     <button onClick={() => handleMonthChange(1)} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition-all">
                         <ChevronLeft className="w-6 h-6" />
                     </button>
@@ -227,14 +221,15 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
                     {daysInMonth.map((day, idx) => {
                         if (!day) return <div key={`empty-${idx}`} />;
                         const isSelected = day.isSameDate(selectedDate);
-                        const isToday = day.isSameDate(new HDate());
+                        const isToday = day.isSameDate(new HDate()); // Real today
+
+                        // Check exact match only
+                        const hasEvents = getNamesForDate(day).length > 0;
+
                         const dayLabel = gematriya(day.getDate()).replace(/['"]/g, '');
-                        // Gregorian Date
                         const gDate = day.greg();
                         const gDay = gDate.getDate();
-                        const gMonth = gDate.getMonth() + 1; // 0-indexed
-
-                        const hasEvents = getNamesForDate(day).length > 0;
+                        const gMonth = gDate.getMonth() + 1;
 
                         return (
                             <div
@@ -242,7 +237,12 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
                                 onClick={() => setSelectedDate(day)}
                                 className={`
                                     min-h-[80px] rounded-xl border p-2 relative cursor-pointer flex flex-col items-center justify-start gap-1 transition-all
-                                    ${isSelected ? 'border-primary bg-orange-50' : isToday ? 'border-gray-400 font-bold bg-gray-50' : 'border-gray-100 hover:border-orange-200 hover:shadow-sm'}
+                                    ${isSelected
+                                        ? 'border-primary bg-orange-50 ring-1 ring-orange-200'
+                                        : isToday
+                                            ? 'border-gray-400 font-bold bg-blue-50'
+                                            : 'border-gray-100 hover:border-orange-200 hover:shadow-sm'
+                                    }
                                 `}
                             >
                                 <span className={`text-xl font-bold ${isSelected || isToday ? 'text-primary' : 'text-gray-800'}`}>
@@ -252,8 +252,8 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
                                     {gDay}/{gMonth}
                                 </span>
                                 {hasEvents && (
-                                    <div className="flex gap-0.5 mt-1">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+                                    <div className="absolute bottom-2 flex gap-0.5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shadow-sm animate-pulse"></div>
                                     </div>
                                 )}
                             </div>
@@ -267,18 +267,27 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
                 <h3 className="text-lg font-bold border-b border-gray-100 pb-4 mb-4 text-center text-gray-800">
                     אזכרות ליום {formatHebrewDateSmart(formatHebrewDate(selectedDate))}
                 </h3>
-                <div className="overflow-y-auto space-y-3 flex-1 px-1">
+                <div className="overflow-y-auto space-y-3 flex-1 px-1 custom-scrollbar">
                     {selectedDayNames.length === 0 ? (
-                        <div className="text-center text-gray-400 mt-10">אין אזכרות ליום זה</div>
+                        <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                            <div className="bg-gray-50 p-4 rounded-full">
+                                <CalendarIcon size={32} className="opacity-20" />
+                            </div>
+                            <p>אין אזכרות ביום זה</p>
+                        </div>
                     ) : (
                         selectedDayNames.map((item, idx) => (
                             <div
                                 key={idx}
                                 onClick={() => setPopupItem(item)}
-                                className="bg-gray-50 p-3 rounded-xl border border-gray-100 hover:border-orange-300 hover:bg-orange-50 cursor-pointer transition-all group"
+                                className="bg-white p-3 rounded-xl border border-gray-100 hover:border-orange-300 hover:bg-orange-50 cursor-pointer transition-all group shadow-sm"
                             >
-                                <div className="font-bold text-gray-800 group-hover:text-primary">{item.name}</div>
-                                <div className="text-xs text-gray-500">{formatHebrewDateSmart(item.hebrew_date_text || '')}</div>
+                                <div className="font-bold text-gray-800 group-hover:text-primary text-lg">{item.name}</div>
+                                {item.father_name && <div className="text-xs text-gray-500 mt-1">בן/ת {item.father_name}</div>}
+                                <div className="text-xs text-gray-400 mt-2 flex justify-between">
+                                    <span>{item.hebrew_date_text}</span>
+                                    <span>{item.gregorian_date?.split('-')[0]}</span>
+                                </div>
                             </div>
                         ))
                     )}

@@ -36,7 +36,7 @@ const MemorialServiceGenerator = () => {
     const [isBat, setIsBat] = useState(false); // Ben/Bat toggle
 
     // Settings
-    const [selectedFont, setSelectedFont] = useState(fontOptions[1]); // Default Frank Ruhl
+    const [selectedFont, setSelectedFont] = useState(fontOptions.find(f => f.id === 'Frank Ruhl Libre') || fontOptions[0]);
     const [selectedSize, setSelectedSize] = useState(fontSizeOptions[1]); // Default XL
 
     // Kaddish Nusach Selection
@@ -77,6 +77,7 @@ const MemorialServiceGenerator = () => {
 
     const handleGenerate = (e) => {
         e.preventDefault();
+        console.log("Generating for:", name);
         if (!name.trim()) return;
 
         // Auto-Transliterate if English

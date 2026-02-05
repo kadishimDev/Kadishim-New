@@ -1,14 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Users, ChevronRight, ChevronLeft, Calendar as CalendarIcon, UserPlus } from 'lucide-react';
+import { Search, UserPlus, Eye, ChevronRight, ChevronLeft } from 'lucide-react';
 import { normalizeHebrewDate } from '../../utils/dateUtils';
+import DeceasedPopup from '../DeceasedPopup'; // Import Popup
 
-const MemorialsManager = ({ memorials }) => {
+const MemorialsManager = ({ memorials, onUpdate }) => {
     // State
     const [searchTerm, setSearchTerm] = useState('');
     const [dateFilter, setDateFilter] = useState('');
     const [itemsPerPage, setItemsPerPage] = useState(20);
     const [currentPage, setCurrentPage] = useState(1);
     const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+    const [popupItem, setPopupItem] = useState(null); // Popup State
 
     // Processing
     const processedData = useMemo(() => {
@@ -116,6 +118,9 @@ const MemorialsManager = ({ memorials }) => {
                 </div>
             </div>
 
+            {/* Popup */}
+            {popupItem && <DeceasedPopup data={popupItem} onClose={() => setPopupItem(null)} onUpdate={onUpdate} />}
+
             {/* Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
@@ -136,7 +141,14 @@ const MemorialsManager = ({ memorials }) => {
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {currentData.map(item => (
-                                <tr key={item.id} className="hover:bg-blue-50/50 transition-colors group">
+                                <tr
+                                    key={item.id}
+                                    onClick={() => {
+                                        console.log('Row clicked:', item);
+                                        setPopupItem(item);
+                                    }}
+                                    className="hover:bg-blue-50/50 transition-colors group cursor-pointer" // Pointer cursor
+                                >
                                     <td className="p-4 font-mono text-gray-400 text-sm">#{item.id}</td>
                                     <td className="p-4 font-bold text-gray-800">
                                         {item.name}
@@ -147,8 +159,8 @@ const MemorialsManager = ({ memorials }) => {
                                         {item.gregorian_date && <span className="text-xs block text-gray-400 font-mono">{item.gregorian_date}</span>}
                                     </td>
                                     <td className="p-4">
-                                        <button className="text-primary bg-orange-50 hover:bg-orange-100 px-3 py-1 rounded-lg text-sm font-bold transition-colors">
-                                            ערוך
+                                        <button className="text-primary bg-orange-50 hover:bg-orange-100 px-3 py-1 rounded-lg text-sm font-bold transition-colors flex items-center gap-1">
+                                            <Eye size={14} /> צפה
                                         </button>
                                     </td>
                                 </tr>
@@ -156,6 +168,7 @@ const MemorialsManager = ({ memorials }) => {
                         </tbody>
                     </table>
                 </div>
+
 
                 {/* Pagination */}
                 <div className="p-4 border-t border-gray-100 flex justify-between items-center bg-gray-50">
