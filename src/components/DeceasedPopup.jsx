@@ -43,7 +43,14 @@ const DeceasedPopup = ({ data, onClose, onUpdate }) => {
     );
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in_modal">
+        <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in_modal"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                    onClose();
+                }
+            }}
+        >
             <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-scale-in flex flex-col max-h-[90vh]">
 
                 {/* Header */}
@@ -79,8 +86,8 @@ const DeceasedPopup = ({ data, onClose, onUpdate }) => {
                         <button
                             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
                             className={`p-2 rounded-full transition-colors flex items-center gap-2 px-4 shadow-sm ${isEditing
-                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                    : 'bg-primary/10 text-primary hover:bg-primary/20'
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                : 'bg-primary/10 text-primary hover:bg-primary/20'
                                 }`}
                         >
                             {isEditing ? <><Save size={18} /> שמור</> : <><Edit2 size={18} /> ערוך</>}

@@ -5,6 +5,42 @@ import { kaddishData } from '../data/kaddishData';
 import { BookOpen, ChevronLeft, ArrowRight } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 
+// Helper component for formatted text
+const FormattedKaddishText = ({ text }) => {
+    if (!text) return null;
+
+    // Split by newlines to preserve stanzas
+    const lines = text.split('\n');
+
+    return (
+        <div className="space-y-4">
+            {lines.map((line, index) => {
+                if (!line.trim()) return <div key={index} className="h-4" />;
+
+                // Split by spaces to handle words individually
+                const words = line.split(' ');
+
+                return (
+                    <p key={index} className="text-2xl leading-relaxed text-gray-800">
+                        {words.map((word, i) => {
+                            // Clean word for checking (remove punctuation)
+                            const cleanWord = word.replace(/[.,:()\-]/g, '');
+                            // Check for Amen (exact match with niqqud)
+                            const isAmen = cleanWord.includes('אָמֵן');
+
+                            return (
+                                <span key={i} className={isAmen ? "font-bold text-primary" : ""}>
+                                    {word}{' '}
+                                </span>
+                            );
+                        })}
+                    </p>
+                );
+            })}
+        </div>
+    );
+};
+
 const KaddishLibrary = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const initialNusach = searchParams.get('nusach') || 'sephardi';
@@ -113,11 +149,9 @@ const KaddishLibrary = () => {
                                     {currentData?.title || "טקסט חסר"}
                                 </h2>
 
-                                <div className="prose prose-xl max-w-none text-gray-800 leading-[2.5]" style={{ fontFamily: 'Frank Ruhl Libre, serif' }}>
+                                <div className="prose prose-xl max-w-none text-gray-800" style={{ fontFamily: 'Frank Ruhl Libre, serif' }}>
                                     {currentData?.text ? (
-                                        <div className="whitespace-pre-wrap">
-                                            {currentData.text}
-                                        </div>
+                                        <FormattedKaddishText text={currentData.text} />
                                     ) : (
                                         <div className="text-center py-20 text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                                             <p>הטקסט עבור בחירה זו יעודכן בקרוב.</p>

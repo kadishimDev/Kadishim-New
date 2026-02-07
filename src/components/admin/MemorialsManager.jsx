@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, UserPlus, Eye, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Search, UserPlus, Eye, ChevronRight, ChevronLeft, Download } from 'lucide-react';
 import { normalizeHebrewDate } from '../../utils/dateUtils';
 import DeceasedPopup from '../DeceasedPopup'; // Import Popup
 
@@ -48,6 +48,29 @@ const MemorialsManager = ({ memorials, onUpdate }) => {
                     if (!isHebrewA && isHebrewB) return 1;
                 }
 
+                if (sortConfig.key === 'hebrew_date_text') {
+                    // Custom Hebrew Month Sort
+                    const getMonthValue = (dateStr) => {
+                        if (!dateStr) return 999;
+                        const monthsOrder = {
+                            'תשרי': 1, 'חשון': 2, 'חשוון': 2, 'כסלו': 3, 'טבת': 4, 'שבט': 5, 'אדר': 6, 'אדר א': 6, 'אדר ב': 7,
+                            'ניסן': 8, 'אייר': 9, 'סיון': 10, 'תמוז': 11, 'אב': 12, 'אלול': 13
+                        };
+                        for (const [month, val] of Object.entries(monthsOrder)) {
+                            if (dateStr.includes(month)) return val;
+                        }
+                        return 999; // Unknown
+                    };
+                    aVal = getMonthValue(a.hebrew_date_text);
+                    bVal = getMonthValue(b.hebrew_date_text);
+                }
+
+                // Date sort adjustment
+                if (sortConfig.key === 'created_at') {
+                    aVal = new Date(aVal || 0);
+                    bVal = new Date(bVal || 0);
+                }
+
                 if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
                 if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
                 return 0;
@@ -55,6 +78,34 @@ const MemorialsManager = ({ memorials, onUpdate }) => {
         }
         return data;
     }, [memorials, searchTerm, dateFilter, sortConfig]);
+
+    const handleExportCSV = () => {
+        const headers = ["ID", "Name", "Father Name", "Hebrew Date", "Gregorian Date", "Created At"];
+        const csvContent = [
+            headers.join(","),
+            ...processedData.map(item => {
+                const row = [
+                    item.id,
+                    `"${item.name || ''}"`, // Quote to handle commas
+                    `"${item.father_name || ''}"`,
+                    `"${item.hebrew_date_text || ''}"`,
+                    item.gregorian_date || '',
+                    item.created_at || ''
+                ];
+                return row.join(",");
+            })
+        ].join("\n");
+
+        // Add BOM for Excel Hebrew support
+        const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `memorials_export_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     const totalPages = Math.ceil(processedData.length / itemsPerPage);
     const currentData = processedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -65,14 +116,32 @@ const MemorialsManager = ({ memorials, onUpdate }) => {
         setSortConfig({ key, direction });
     };
 
+    // Date formatter
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '-';
+        try {
+            return new Date(dateStr).toLocaleDateString('he-IL');
+        } catch (e) {
+            return dateStr;
+        }
+    };
+
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-gray-800">ניהול אזכרות</h2>
                 {/* Simulated Action */}
-                <button className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-800 transition-all shadow-sm">
-                    <UserPlus size={18} /> הוסף ידני
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleExportCSV}
+                        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition-all shadow-sm"
+                    >
+                        <Download size={18} /> ייצוא לאקסל
+                    </button>
+                    <button className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-800 transition-all shadow-sm">
+                        <UserPlus size={18} /> הוסף ידני
+                    </button>
+                </div>
             </div>
 
             {/* Filters */}
@@ -136,6 +205,9 @@ const MemorialsManager = ({ memorials, onUpdate }) => {
                                 <th onClick={() => requestSort('hebrew_date_text')} className="p-4 cursor-pointer hover:bg-gray-100 transition-colors">
                                     תאריך עברי {sortConfig.key === 'hebrew_date_text' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                 </th>
+                                <th onClick={() => requestSort('created_at')} className="p-4 cursor-pointer hover:bg-gray-100 transition-colors">
+                                    תאריך הוספה {sortConfig.key === 'created_at' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                </th>
                                 <th className="p-4 w-32">פעולות</th>
                             </tr>
                         </thead>
@@ -155,8 +227,11 @@ const MemorialsManager = ({ memorials, onUpdate }) => {
                                         {item.father_name && <span className="text-xs font-normal text-gray-500 block">בן/בת {item.father_name}</span>}
                                     </td>
                                     <td className="p-4 text-gray-600">
-                                        {item.hebrew_date_text ? normalizeHebrewDate(item.hebrew_date_text) : '-'}
+                                        {item.hebrew_date_text || '-'}
                                         {item.gregorian_date && <span className="text-xs block text-gray-400 font-mono">{item.gregorian_date}</span>}
+                                    </td>
+                                    <td className="p-4 text-gray-600 text-sm">
+                                        {formatDate(item.created_at)}
                                     </td>
                                     <td className="p-4">
                                         <button className="text-primary bg-orange-50 hover:bg-orange-100 px-3 py-1 rounded-lg text-sm font-bold transition-colors flex items-center gap-1">

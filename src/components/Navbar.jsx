@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import menuData from '../data/menu_structure.json';
 
-const Navbar = () => {
+const Navbar = ({ pages = [] }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [expandedMobile, setExpandedMobile] = useState({}); // Track expanded items by name/key
@@ -17,8 +17,47 @@ const Navbar = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Load menu from external JSON structure
-    const menuItems = menuData;
+    // Filter menu items based on visibility
+    // Helper function to check if a path is visible
+    const isPathVisible = (path) => {
+        // Check for Home page visibility directly from DB
+        if (path === '/') {
+            const homePage = pages?.find(p => p.slug === 'home');
+            return homePage ? (homePage.isVisible !== false) : true;
+        }
+
+        // Other special paths (hardcoded for now as they might not have DB pages)
+        if (path === '/request' || path === '/kaddish-library' || path === '/generators') return true;
+
+        // Content pages /page/:slug
+        if (path.startsWith('/page/')) {
+            const slug = path.split('/page/')[1];
+            // If pages prop is provided, check it. If not found, assume visible or check if pages is empty
+            if (!pages || pages.length === 0) return true;
+            const page = pages.find(p => p.slug === slug);
+            return page ? (page.isVisible !== false) : true; // Default to true if not found (legacy behavior)
+        }
+        return true;
+    };
+
+    // Recursive function to filter menu structure
+    const filterMenu = (items) => {
+        return items.map(item => {
+            // Check if item itself is visible
+            if (item.path && !isPathVisible(item.path)) return null;
+
+            // Check children
+            if (item.items) {
+                const filteredChildren = filterMenu(item.items).filter(Boolean);
+                if (filteredChildren.length === 0 && !item.path) return null; // Hide category if empty and no path
+                return { ...item, items: filteredChildren };
+            }
+
+            return item;
+        }).filter(Boolean);
+    };
+
+    const menuItems = filterMenu(menuData);
 
     return (
         <nav

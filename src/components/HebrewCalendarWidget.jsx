@@ -78,8 +78,11 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
             // 1. Check Struct (Primary)
             if (item.hebrew_date_struct) {
                 const { day: d, month: m } = item.hebrew_date_struct;
-                // Exact Match
-                if (d === day && m === month) return true;
+                // Debug log
+                if (d === day && m === month) {
+                    console.log('Match found:', item.name);
+                    return true;
+                }
 
                 // Simple Adar Logic:
                 // If Item is Adar (12) and current is Adar I (12) or Adar II (13) in leap year?
@@ -265,7 +268,7 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
             {/* Sidebar List */}
             <div className="md:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col h-[600px]">
                 <h3 className="text-lg font-bold border-b border-gray-100 pb-4 mb-4 text-center text-gray-800">
-                    אזכרות ליום {formatHebrewDateSmart(formatHebrewDate(selectedDate))}
+                    אזכרות ליום {formatHebrewDate(selectedDate)}
                 </h3>
                 <div className="overflow-y-auto space-y-3 flex-1 px-1 custom-scrollbar">
                     {selectedDayNames.length === 0 ? (

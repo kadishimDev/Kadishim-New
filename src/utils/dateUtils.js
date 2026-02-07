@@ -9,29 +9,41 @@ export const formatHebrewDate = (date) => {
     const hDate = date instanceof HDate ? date : new HDate(date);
 
     const day = hDate.getDate();
-    const monthName = hDate.getMonthName('h');
+    const month = hDate.getMonth();
     const year = hDate.getFullYear();
 
-    // Format day with geresh/gershayim
-    let dayStr = gematriya(day);
-    if (!dayStr.includes('"') && !dayStr.includes("'")) {
-        if (dayStr.length === 1) dayStr += "'";
-        else dayStr = dayStr.slice(0, -1) + '"' + dayStr.slice(-1);
+    // 1. Month Mapping
+    const months = ['', 'ניסן', 'אייר', 'סיון', 'תמוז', 'אב', 'אלול', 'תשרי', 'חשון', 'כסלו', 'טבת', 'שבט'];
+    let monthName = '';
+
+    if (HDate.isLeapYear(year)) {
+        if (month === 12) monthName = 'אדר א';
+        else if (month === 13) monthName = 'אדר ב';
+        else monthName = months[month];
+    } else {
+        if (month === 12) monthName = 'אדר';
+        else monthName = months[month];
     }
 
-    // Format year with geresh/gershayim
-    let yearStr = gematriya(year);
-    if (!yearStr.includes('"') && !yearStr.includes("'")) {
-        if (yearStr.length === 1) yearStr += "'";
-        else yearStr = yearStr.slice(0, -1) + '"' + yearStr.slice(-1);
-    }
-    // Add 'Ha' prefix to year if standard
+    // 2. Day Format
+    let dayStr = gematriya(day).replace(/['"]/g, '').replace(/״/g, '');
+    if (dayStr.length === 1) dayStr += "'";
+    else dayStr = dayStr.slice(0, -1) + '"' + dayStr.slice(-1);
+
+    // 3. Year Format
+    let yearStr = gematriya(year).replace(/['"]/g, '').replace(/״/g, '');
+    // Add 'Ha' prefix
     const fullYearStr = `ה${yearStr}`;
+    // Add quotes to final year string
+    let finalYear = fullYearStr;
+    if (fullYearStr.length > 1) {
+        finalYear = fullYearStr.slice(0, -1) + '"' + fullYearStr.slice(-1);
+    }
 
-    // Add 'Be' prefix to month
+    // 4. Month Prefix 'Be'
     const monthWithPrefix = `ב${monthName}`;
 
-    return `${dayStr} ${monthWithPrefix}, ${fullYearStr}`;
+    return `${dayStr} ${monthWithPrefix}, ${finalYear}`;
 };
 
 /**

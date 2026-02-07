@@ -96,13 +96,24 @@ const MemorialServiceGenerator = () => {
         }
 
         const nameLetters = decomposeName(processName);
+
+        // Add Ben/Bat and Mother Name letters
+        const benBatWord = isBat ? 'בת' : 'בן';
+        const benBatLetters = decomposeName(benBatWord).map(l => ({ ...l, isConnector: true })); // Mark as connector
+
+        // Helper to decompose mother name safely
+        const motherLetters = displayMother ? decomposeName(displayMother).map(l => ({ ...l, isMother: true })) : [];
+
+        // Neshama Letters
         const neshamaLetters = showNeshama ? ['נ', 'ש', 'מ', 'ה'].map(c => ({ char: c, normalized: c, isNeshama: true })) : [];
-        const allLetters = [...nameLetters, ...neshamaLetters];
+
+        // Combined Sequence: Name -> Ben/Bat -> Mother -> Neshama
+        const allLetters = [...nameLetters, ...benBatLetters, ...motherLetters, ...neshamaLetters];
 
         if (activeTab === 'tehillim') {
             const content = allLetters.map(item => ({
                 ...item,
-                data: tehillimLetters[item.normalized],
+                data: tehillimLetters[item.normalized] || [],
                 type: 'verse'
             }));
             setGeneratedContent(content);
@@ -110,15 +121,32 @@ const MemorialServiceGenerator = () => {
             const content = allLetters.map(item => ({
                 ...item,
                 meta: mishnayotLetters[item.normalized],
-                fullText: mishnayotFull[item.normalized] || "טקסט משנה זמני - יתווסף בהמשך",
+                fullText: mishnayotFull[item.normalized] || "טקסט משנה...",
                 type: 'mishnah'
             }));
             setGeneratedContent(content);
         } else if (activeTab === 'grave') {
             // Grave Service Composition based on user feedback (Full Traditional Order)
 
-            // 1. Tehillim for Name
+            // 1. Tehillim for Name + Ben/Bat + Mother
+            // Note: User said "Prayer text itself... placed on Ben/Bat selection".
+            // And "Add letters for Ben/Bat and Mother".
+
+            const tehillimNameSection = allLetters.map(item => ({
+                ...item,
+                data: tehillimLetters[item.normalized],
+                type: 'verse'
+            }));
+            // Note: Neshama is already in allLetters if selected. 
+            // But Grave mode had separate sections.
+            // Let's keep the detailed sections for Grave, but include Ben/Bat/Mother in the "Name" section?
+            // Or just use the allLetters logic?
+            // "פרקי תהילים לפי שם הנפטר: [Name] [Ben] [Mother]"
+
+            // Re-using the manual composition for Grave to be precise
             const tehillimName = nameLetters.map(item => ({ ...item, data: tehillimLetters[item.normalized], type: 'verse' }));
+            const tehillimBenBat = benBatLetters.map(item => ({ ...item, data: tehillimLetters[item.normalized], type: 'verse' }));
+            const tehillimMother = motherLetters.map(item => ({ ...item, data: tehillimLetters[item.normalized], type: 'verse' }));
 
             // 2. Tehillim for Neshama (N.S.M.H)
             const neshamaArr = ['נ', 'ש', 'מ', 'ה'].map(c => ({ char: c, normalized: c === 'ה' ? 'ה' : c === 'מ' ? 'מ' : c === 'ש' ? 'ש' : 'נ', isNeshama: true })); // Simple map
@@ -154,17 +182,21 @@ const MemorialServiceGenerator = () => {
                 };
             });
 
+
             // Clean display name (remove quotes if any)
             const cleanDisplay = displayName.replace(/['"״׳]/g, '').trim();
             const cleanMother = (displayMother || '').replace(/['"״׳]/g, '').trim();
 
             const prayerPart = [
-                { type: 'text', title: prayerTexts.intro.title, text: prayerTexts.intro.text },
+                { type: 'text', title: prayerTexts.intro.title, text: (gender === 'male' ? prayerTexts.intro.male : prayerTexts.intro.female).replace('[שם הנפטר/ת]', `**${cleanDisplay} ${benBatWord} ${cleanMother || '_____'}**`) },
                 { type: 'header_info', text: `סדר אזכרה ל${gender === 'male' ? 'מנוח' : 'מנוחה'} ${cleanDisplay} ${isBat ? 'בת' : 'בן'} ${cleanMother || '______'}` },
 
-                // Tehillim Section
-                { type: 'section_title', text: `פרקי תהילים לפי שם הנפטר: ${cleanDisplay}` },
+                // Tehillim Section (Name + Ben/Bat + Mother)
+                { type: 'section_title', text: `פרקי תהילים לפי שם: ${cleanDisplay} ${benBatWord} ${cleanMother}` },
                 ...tehillimName,
+                // Separator or just continuation? Usually continuous.
+                ...tehillimBenBat,
+                ...tehillimMother,
 
                 { type: 'section_title', text: 'אותיות נשמה - קריעת רוע גזר הדין' }, // Neshama + Kra Satan
                 ...tehillimNeshama,
@@ -187,7 +219,7 @@ const MemorialServiceGenerator = () => {
                 { type: 'text', title: kaddishData[nusach].derabanan.title, text: kaddishData[nusach].derabanan.text },
 
                 // Prayer After
-                { type: 'text', title: prayerTexts.prayerAfter.title, text: prayerTexts.prayerAfter.text.replace('[שם הנפטר]', `${cleanDisplay} בן/בת ${cleanMother}`) },
+                { type: 'text', title: prayerTexts.prayerAfter.title, text: (gender === 'male' ? prayerTexts.prayerAfter.male : prayerTexts.prayerAfter.female).replace('[שם הנפטר]', `**${cleanDisplay} ${benBatWord} ${cleanMother}**`) },
 
                 // Michtam
                 { type: 'text', title: prayerTexts.michtam.title, text: prayerTexts.michtam.text },
@@ -199,7 +231,7 @@ const MemorialServiceGenerator = () => {
                 {
                     type: 'text',
                     title: "אל מלא רחמים",
-                    text: (gender === 'male' ? prayerTexts.elMaleh.male : prayerTexts.elMaleh.female).replace('[שם הנפטר/ת]', `${cleanDisplay} בן/בת ${cleanMother}`)
+                    text: (gender === 'male' ? prayerTexts.elMaleh.male : prayerTexts.elMaleh.female).replace('[שם הנפטר/ת]', `**${cleanDisplay} ${benBatWord} ${cleanMother}**`)
                 }
             ];
             setGeneratedContent(prayerPart);
@@ -207,15 +239,6 @@ const MemorialServiceGenerator = () => {
 
         // Store display names for the render view if simple generation
         if (activeTab !== 'grave') {
-            // We need a way to pass the converted names to the render view without changing the input state (optional, or we just rely on generated content?). 
-            // Actually, the render view uses 'name' and 'motherName' state variables.
-            // We should probably update a temp state or just force update the state?
-            // User might want to see the Hebrew name in the input box... usually better UX to update the input?
-            // Let's decide: implied requirement is "if user wrote SARAH, generate for Sarah". 
-            // The render view sees {name}. Let's update a separate state for "displayName" or just use the local variables if we pass them?
-            // Easiest: pass them in the content object or separate state.
-            // But 'generatedContent' is just the array.
-            // Let's create a 'generationMeta' state or similar.
             setGenerationMeta({ name: displayName, motherName: displayMother });
         }
     };
@@ -225,41 +248,152 @@ const MemorialServiceGenerator = () => {
         setIsGeneratingPdf(true);
 
         try {
-            const element = printRef.current;
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                logging: false,
-                windowWidth: 1200
-            });
+            const originalElement = printRef.current;
 
-            const imgData = canvas.toDataURL('image/png');
+            // 1. Create Staging Area
+            const staging = document.createElement('div');
+            staging.style.position = 'absolute';
+            staging.style.left = '-9999px';
+            staging.style.top = '0';
+            staging.style.width = '210mm'; // A4 width
+            staging.style.backgroundColor = 'white';
+            document.body.appendChild(staging);
+
+            // 2. Setup Constants
+            const CONTENT_WIDTH_PIXELS = originalElement.offsetWidth; // 793px usually
+            // We scale 190mm to px
+            const mmToPx = CONTENT_WIDTH_PIXELS / 190;
+            const PAGE_CONTENT_HEIGHT_PX = 277 * mmToPx; // 277mm usable height
+
+            // 3. Helper to create a Page
+            const createPage = () => {
+                const page = document.createElement('div');
+                page.style.width = '100%';
+                page.style.minHeight = `${PAGE_CONTENT_HEIGHT_PX}px`; // enforce height check
+                page.style.padding = '40px'; // Approx padding-10 (40px)
+                page.style.boxSizing = 'border-box';
+                page.style.backgroundColor = 'white';
+                page.style.position = 'relative';
+                // Copy font family
+                page.style.fontFamily = originalElement.style.fontFamily;
+
+                // Add Border (Cloned from original)
+                const border1 = document.createElement('div');
+                border1.className = "absolute inset-4 border-[3px] border-double border-orange-200 pointer-events-none";
+                const border2 = document.createElement('div');
+                border2.className = "absolute inset-5 border border-orange-100 pointer-events-none";
+                page.appendChild(border1);
+                page.appendChild(border2);
+
+                // Inner Content Container
+                const container = document.createElement('div');
+                container.className = "relative z-10 space-y-8"; // Use space-y-8 for spacing
+                container.style.direction = 'rtl';
+                page.appendChild(container);
+
+                return { page, container };
+            };
+
+            const pages = [];
+            let currentPageObj = createPage();
+            pages.push(currentPageObj);
+            staging.appendChild(currentPageObj.page);
+
+            // 4. Clone Header to Page 1
+            const originalHeader = originalElement.querySelector('.relative.z-10.flex'); // The header div
+            if (originalHeader) {
+                const headerClone = originalHeader.cloneNode(true);
+                // Insert before the container
+                currentPageObj.page.insertBefore(headerClone, currentPageObj.container);
+            }
+
+            // Footer text for Page 1
+            const footerText = document.createElement('div');
+            footerText.className = "absolute bottom-6 left-0 right-0 text-center text-xs text-gray-400";
+            footerText.innerText = 'הופק באמצעות אתר "קדישים" • כל הזכויות שמורות';
+            currentPageObj.page.appendChild(footerText);
+
+            // 5. Distribute Content
+            const contentSource = originalElement.querySelector('.space-y-8');
+            if (contentSource) {
+                const items = Array.from(contentSource.children);
+
+                for (const item of items) {
+                    const clone = item.cloneNode(true);
+
+                    // Temporarily append to check height
+                    currentPageObj.container.appendChild(clone);
+
+                    // Check if we exceeded page height
+                    // We check the 'bottom' of the container relative to the page
+                    // The page has a fixed printable height logic? 
+                    // No, simpler: check staging scroll height/offsets
+
+                    // Force layout update check?
+                    // We need to check if the CONTENT container height + header > PAGE_CAPACITY
+                    // But easier: the `page` element should be checked for total height?
+                    // Or just visual approximation.
+
+                    // Let's rely on bounding rects of the newly appended item vs the page bottom.
+                    // But we are off-screen.
+
+                    const pageRect = currentPageObj.page.getBoundingClientRect();
+                    const cloneRect = clone.getBoundingClientRect();
+
+                    // Relative bottom of the clone inside the page
+                    const relativeBottom = cloneRect.bottom - pageRect.top;
+
+                    // Limit is 277mm converted to px
+                    if (relativeBottom > PAGE_CONTENT_HEIGHT_PX) {
+                        // Overflow!
+                        // Remove from this page
+                        currentPageObj.container.removeChild(clone);
+
+                        // Create New Page
+                        currentPageObj = createPage();
+                        pages.push(currentPageObj);
+                        staging.appendChild(currentPageObj.page);
+
+                        // Append to new page
+                        currentPageObj.container.appendChild(clone);
+
+                        // Add Footer to new page too
+                        const footerClone = footerText.cloneNode(true);
+                        currentPageObj.page.appendChild(footerClone);
+                    }
+                }
+            }
+
+            // Wait for images/fonts
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // 6. Generate PDF
             const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = 210;
+            const pageHeight = 297;
 
-            const imgWidth = 210; // A4 Width in mm
-            const pageHeight = 297; // A4 Height in mm
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            for (let i = 0; i < pages.length; i++) {
+                if (i > 0) pdf.addPage();
 
-            let heightLeft = imgHeight;
-            let position = 0;
+                const pageCanvas = await html2canvas(pages[i].page, {
+                    scale: 1.5,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    logging: false
+                });
 
-            // First Page
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
-
-            // Extra Pages
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight; // Negative offset to show next chunk
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
+                const imgData = pageCanvas.toDataURL('image/jpeg', 0.85);
+                pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight); // Full A4
             }
 
             pdf.save(`tefilla_${name}.pdf`);
+
+            // 7. Cleanup
+            document.body.removeChild(staging);
+
         } catch (err) {
             console.error(err);
-            alert("שגיאה ביצירת הקובץ. נא לנסות שוב.");
+            alert("שגיאה ביצירת הקובץ.");
         } finally {
             setIsGeneratingPdf(false);
         }
@@ -393,7 +527,11 @@ const MemorialServiceGenerator = () => {
                                 if (item.type === 'text') return (
                                     <div key={idx} className="bg-orange-50/30 p-6 rounded-xl text-center border border-orange-100 my-6">
                                         <h3 className="font-bold text-xl mb-3 text-orange-900">{item.title}</h3>
-                                        <p className="whitespace-pre-wrap leading-[2]">{item.text}</p>
+                                        <p className="whitespace-pre-wrap leading-[2]">
+                                            {item.text.split('**').map((part, i) =>
+                                                i % 2 === 1 ? <span key={i} className="font-bold text-gray-900 border-b border-orange-300">{part}</span> : part
+                                            )}
+                                        </p>
                                     </div>
                                 );
                                 if (item.type === 'section_title') return (
@@ -477,7 +615,7 @@ const MemorialServiceGenerator = () => {
                             <label className="flex items-center cursor-pointer group">
                                 <div className="relative">
                                     <input type="checkbox" id="neshama" checked={showNeshama} onChange={(e) => setShowNeshama(e.target.checked)} className="peer sr-only" />
-                                    <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                                    <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
                                 </div>
                                 <span className="mr-3 font-medium text-gray-700 group-hover:text-orange-700 transition-colors">הוסף אותיות "נשמה"</span>
                             </label>

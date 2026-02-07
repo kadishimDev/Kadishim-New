@@ -3,7 +3,31 @@ import { Link } from 'react-router-dom';
 import { Heart, Shield, BookOpen, Star, ArrowLeft, ChevronDown, CheckCircle } from 'lucide-react';
 import MemorialServiceGenerator from '../components/TehillimGenerator';
 
-const Home = () => {
+import ContactForm from '../components/ContactForm';
+
+const Home = ({ pages }) => {
+    // Find Home Page Data
+    const homePage = pages?.find(p => p.slug === 'home');
+
+    // Helper to render content with shortcodes (Shared logic)
+    const renderContent = (htmlContent) => {
+        if (!htmlContent) return null;
+
+        // Check for [form] shortcode
+        if (htmlContent.includes('[form]')) {
+            const parts = htmlContent.split('[form]');
+            return (
+                <div>
+                    <div dangerouslySetInnerHTML={{ __html: parts[0] }} />
+                    <ContactForm />
+                    {parts[1] && <div dangerouslySetInnerHTML={{ __html: parts[1] }} />}
+                </div>
+            );
+        }
+
+        return <div dangerouslySetInnerHTML={{ __html: htmlContent }} />;
+    };
+
 
     const services = [
         {
@@ -42,6 +66,9 @@ const Home = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60"></div>
                 </div>
 
+                {/* Lighting Overlay - Flickering Candle Effect */}
+                <div className="absolute inset-0 z-0 pointer-events-none animate-candle-flicker candle-glow-overlay"></div>
+
                 <div className="container mx-auto px-6 relative z-10 text-center text-white mt-16">
                     <div className="inline-block mb-4 px-4 py-1.5 border border-orange-500/30 rounded-full bg-black/30 backdrop-blur-sm text-orange-400 text-sm font-medium tracking-wide animate-fade-in-up">
                         שמופעל על ידיי ארגון "תורת משה" | מיסודו של הרב משה בן-טוב זצוק"ל
@@ -58,7 +85,7 @@ const Home = () => {
                             to="/request"
                             className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-full font-bold text-lg hover:from-orange-400 hover:to-red-500 hover:scale-105 transition-all shadow-[0_0_30px_rgba(234,88,12,0.4)]"
                         >
-                            הזמנת קדיש
+                            בקשת קדיש
                         </Link>
                         <a
                             href="#about"
@@ -110,23 +137,29 @@ const Home = () => {
                                 </div>
 
                                 <div className="prose prose-lg max-w-none text-gray-700 leading-8">
-                                    <p className="mb-6">
-                                        ארגון <strong>"תורת משה"</strong> מיסודו של הרב <strong>משה בן-טוב זצוק"ל</strong>, מפעיל ומחזיק מספר מסגרות לימוד תורה בירושלים, בבאר שבע ובמקומות נוספים בארץ, בהם שוקדים על לימודים מאות אברכים מצוינים, תמורת מלגה חודשית.
-                                    </p>
+                                    {homePage ? (
+                                        renderContent(homePage.content)
+                                    ) : (
+                                        <>
+                                            <p className="mb-6">
+                                                ארגון <strong>"תורת משה"</strong> מיסודו של הרב <strong>משה בן-טוב זצוק"ל</strong>, מפעיל ומחזיק מספר מסגרות לימוד תורה בירושלים, בבאר שבע ובמקומות נוספים בארץ, בהם שוקדים על לימודים מאות אברכים מצוינים, תמורת מלגה חודשית.
+                                            </p>
 
-                                    <div className="bg-primary/5 p-6 rounded-xl border border-primary/10 my-6">
-                                        <h4 className="flex items-center gap-2 text-xl font-bold text-dark mb-3">
-                                            <Shield className="text-primary w-6 h-6" />
-                                            שליחות של חסד
-                                        </h4>
-                                        <p className="text-base">
-                                            במסגרת פעילות החסד נתקלנו במקרים רבים של נשמות יהודיות שנפטרו ללא מי שיאמר עליהם קדיש.
-                                        </p>
-                                    </div>
+                                            <div className="bg-primary/5 p-6 rounded-xl border border-primary/10 my-6">
+                                                <h4 className="flex items-center gap-2 text-xl font-bold text-dark mb-3">
+                                                    <Shield className="text-primary w-6 h-6" />
+                                                    שליחות של חסד
+                                                </h4>
+                                                <p className="text-base">
+                                                    במסגרת פעילות החסד נתקלנו במקרים רבים של נשמות יהודיות שנפטרו ללא מי שיאמר עליהם קדיש.
+                                                </p>
+                                            </div>
 
-                                    <p className="mb-6">
-                                        לכן, ארגון <strong>"קדישים"</strong> לקח על עצמו לדאוג לאמירת קדיש על כל יהודי ויהודיה ללא תשלום.
-                                    </p>
+                                            <p className="mb-6">
+                                                לכן, ארגון <strong>"קדישים"</strong> לקח על עצמו לדאוג לאמירת קדיש על כל יהודי ויהודיה ללא תשלום.
+                                            </p>
+                                        </>
+                                    )}
                                 </div>
 
                                 <div className="mt-8">
@@ -161,6 +194,12 @@ const Home = () => {
 
             {/* NEW: Memorial Service Generator Section */}
             <section id="tehillim-generator" className="py-12 bg-gray-50">
+                <div className="container mx-auto px-4 text-center mb-8">
+                    <h2 className="text-3xl font-bold text-gray-800 mb-4">יצירת סדר אזכרה ותהילים אישי</h2>
+                    <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+                        הזינו את שם הנפטר/ת ושם האם, ובחרו את סוג התפילה הרצוי. המערכת תפיק עבורכם קובץ PDF מסודר להדפסה הכולל את פרקי התהילים והמשניות לפי השם, יחד עם סדר האזכרה המלא.
+                    </p>
+                </div>
                 <div className="container mx-auto px-4">
                     <MemorialServiceGenerator />
                 </div>

@@ -4,15 +4,17 @@ import { Lock } from 'lucide-react';
 // Layout & Components
 import AdminLayout from '../layouts/AdminLayout';
 import DashboardHome from '../components/admin/DashboardHome';
+import TechnicianDashboard from '../components/admin/TechnicianDashboard';
 import MemorialsManager from '../components/admin/MemorialsManager';
 import PageEditor from '../components/admin/PageEditor';
 import HebrewCalendarWidget from '../components/HebrewCalendarWidget';
 
 // Data
-import memorialsData from '../data/memorials.json';
+import memorialsData from '../data/memorials_v2.json'; // Parsed & Formatted
 import pagesData from '../data/pages_db.json';
+import SystemHealthDNA from '../components/SystemHealthDNA';
 
-const Admin = () => {
+const Admin = ({ pages, setPages }) => {
     // Auth State
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [password, setPassword] = useState('');
@@ -23,7 +25,8 @@ const Admin = () => {
 
     // Data State
     const [memorials, setMemorials] = useState(memorialsData);
-    const [pages, setPages] = useState(pagesData);
+    // Removed local pages state to use prop
+
 
     const handleLogin = (e) => {
         e.preventDefault();
@@ -41,13 +44,21 @@ const Admin = () => {
     };
 
     const handlePageUpdate = (updatedPage) => {
-        // Optimistic Update
-        setPages(prev => prev.map(p => p.slug === updatedPage.slug ? updatedPage : p));
+        // Optimistic Update: Create if not exists, Update if exists
+        setPages(prev => {
+            const exists = prev.some(p => p.slug === updatedPage.slug);
+            if (exists) {
+                return prev.map(p => p.slug === updatedPage.slug ? updatedPage : p);
+            } else {
+                return [...prev, updatedPage];
+            }
+        });
     };
 
     if (!isAuthenticated) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4" dir="rtl">
+                <SystemHealthDNA />
                 <form onSubmit={handleLogin} className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200 animate-fade-in-up">
                     <div className="text-center mb-8">
                         <div className="bg-black inline-block p-4 rounded-full mb-4 shadow-lg">
@@ -79,6 +90,14 @@ const Admin = () => {
                         <button className="w-full bg-black text-white font-bold py-3 rounded-lg hover:bg-gray-800 transition-colors shadow-lg">
                             כניסה למערכת
                         </button>
+
+                        <button
+                            type="button"
+                            onClick={() => window.location.hash = '/'}
+                            className="w-full text-gray-400 hover:text-gray-600 font-medium transition-colors text-sm pt-2"
+                        >
+                            ← חזרה לאתר
+                        </button>
                     </div>
                 </form>
             </div>
@@ -93,7 +112,8 @@ const Admin = () => {
     const renderContent = () => {
         switch (activeTab) {
             case 'dashboard':
-                return <DashboardHome memorials={memorials} pages={pages} onUpdate={handleUpdateMemorial} />;
+                // Technician Dashboard is now the default "Home" view
+                return <TechnicianDashboard memorials={memorials} pages={pages} onNavigate={setActiveTab} />;
             case 'memorials':
                 return <MemorialsManager memorials={memorials} onUpdate={handleUpdateMemorial} />;
             case 'calendar':
@@ -111,7 +131,7 @@ const Admin = () => {
             case 'settings':
                 return <div className="text-center text-gray-400 mt-20">מודול הגדרות בבנייה...</div>;
             default:
-                return <DashboardHome memorials={memorials} pages={pages} />;
+                return <TechnicianDashboard memorials={memorials} pages={pages} />;
         }
     };
 
@@ -122,6 +142,7 @@ const Admin = () => {
             onLogout={handleLogout}
         >
             {renderContent()}
+            <SystemHealthDNA />
         </AdminLayout>
     );
 };

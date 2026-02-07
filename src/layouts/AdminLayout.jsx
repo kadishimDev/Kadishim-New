@@ -10,6 +10,7 @@ import {
     Bell,
     Calendar
 } from 'lucide-react';
+import ToastNotification from '../components/ToastNotification';
 
 const AdminLayout = ({ activeTab, setActiveTab, children, onLogout }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -94,6 +95,8 @@ const AdminLayout = ({ activeTab, setActiveTab, children, onLogout }) => {
                     onClick={() => setIsMobileMenuOpen(false)}
                 />
             )}
+
+            <ToastNotification />
         </div>
     );
 };

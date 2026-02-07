@@ -4,114 +4,6 @@
     "path": "#",
     "items": [
       {
-        "name": "סוגי קדיש",
-        "path": "/kaddish-library",
-        "items": [
-          {
-            "name": "חצי קדיש",
-            "path": "/kaddish-library?type=half"
-          },
-          {
-            "name": "קדיש יהא שלמא",
-            "path": "/kaddish-library?type=yatom"
-          },
-          {
-            "name": "קדיש תתקבל",
-            "path": "/kaddish-library?type=titkabal"
-          },
-          {
-            "name": "קדיש דרבנן",
-            "path": "/kaddish-library?type=derabanan"
-          }
-        ]
-      },
-      {
-        "name": "קדיש על פי עדות",
-        "path": "#",
-        "items": [
-          {
-            "name": "אשכנזי",
-            "path": "/kaddish-library?nusach=ashkenaz",
-            "items": [
-              {
-                "name": "קדיש יהא שלמא - קדיש יתום (אשכנז)",
-                "path": "/kaddish-library?nusach=ashkenaz&type=yatom"
-              },
-              {
-                "name": "חצי קדיש (אשכנז)",
-                "path": "/kaddish-library?nusach=ashkenaz&type=half"
-              },
-              {
-                "name": "קדיש תתקבל (אשכנז)",
-                "path": "/kaddish-library?nusach=ashkenaz&type=titkabal"
-              },
-              {
-                "name": "קדיש דרבנן (אשכנז)",
-                "path": "/kaddish-library?nusach=ashkenaz&type=derabanan"
-              }
-            ]
-          },
-          {
-            "name": "חסידים ספרדים",
-            "path": "/kaddish-library?nusach=sfard",
-            "items": [
-              {
-                "name": "קדיש יהא שלמא (ספרד חסידי)",
-                "path": "/kaddish-library?nusach=sfard&type=yatom"
-              },
-              {
-                "name": "חצי קדיש (ספרד חסידי)",
-                "path": "/kaddish-library?nusach=sfard&type=half"
-              },
-              {
-                "name": "קדיש תתקבל (ספרד חסידי)",
-                "path": "/kaddish-library?nusach=sfard&type=titkabal"
-              },
-              {
-                "name": "קדיש דרבנן (ספרד חסידי)",
-                "path": "/kaddish-library?nusach=sfard&type=derabanan"
-              }
-            ]
-          },
-          {
-            "name": "עדות המזרח",
-            "path": "/kaddish-library?nusach=sephardi",
-            "items": [
-              {
-                "name": "קדיש יהא שלמא (עדות המזרח)",
-                "path": "/kaddish-library?nusach=sephardi&type=yatom"
-              },
-              {
-                "name": "חצי קדיש (עדות המזרח)",
-                "path": "/kaddish-library?nusach=sephardi&type=half"
-              },
-              {
-                "name": "קדיש תתקבל (עדות המזרח)",
-                "path": "/kaddish-library?nusach=sephardi&type=titkabal"
-              },
-              {
-                "name": "קדיש דרבנן (עדות המזרח)",
-                "path": "/kaddish-library?nusach=sephardi&type=derabanan"
-              }
-            ]
-          },
-          {
-            "name": "תימן",
-            "path": "/kaddish-library?nusach=teiman",
-            "items": [
-              {
-                "name": "קדיש יהא שלמא (תימן)",
-                "path": "/kaddish-library?nusach=teiman&type=yatom"
-              },
-              {
-                "name": "קדיש דרבנן (תימן)",
-                "path": "/kaddish-library?nusach=teiman&type=derabanan"
-              }
-            ]
-          }
-        ]
-      },
-      {
         "name": "דיני קדיש",
         "path": "#",
         "items": [
@@ -164,6 +56,11 @@
         "path": "/page/יום-הקדיש-הכללי"
       }
     ]
+  },
+  {
+    "title": "ספריית הקדישים (חדש)",
+    "path": "/kaddish-library",
+    "items": []
   },
   {
     "title": "תפילות לפי שם",
