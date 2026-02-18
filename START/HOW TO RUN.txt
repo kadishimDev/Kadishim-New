@@ -1,0 +1,48 @@
+===================================================
+          KADISHIM - HOW TO RUN & DEPLOY
+===================================================
+
+This folder (START) contains the only scripts you need to run, manage, and deploy the website.
+
+---------------------------------------------------
+1. 🛠️ RUN LOCAL (Development)
+---------------------------------------------------
+Script: RUN_LOCAL.bat
+Action: Starts the local development server (Vite).
+URL:    http://localhost:5173
+Use for: Coding, testing changes locally before deploying.
+
+---------------------------------------------------
+2. 🚀 DEPLOY SAFE (Production)
+---------------------------------------------------
+Script: DEPLOY_SAFE.bat
+Action: 
+    1. BACKUP: Downloads critical files from Production (uploads, config) to '_backups/'.
+    2. SYNC: Fetches latest content (Memorials, Pages) from Production DB to local JSON (so you don't overwrite user edits).
+    3. BUILD: Compiles the project (npm run build).
+    4. UPLOAD: Uploads only CHANGED files to FTP, skipping protected files (uploads/, config.php).
+URL:    https://kadishim.co.il
+Use for: Updating the live site safely.
+
+---------------------------------------------------
+3. 💾 PUSH TO GIT (Source Control)
+---------------------------------------------------
+Script: PUSH_TO_GIT.bat
+Action: Adds all changes, commits with a message, and pushes to GitHub.
+URL:    https://github.com/Jacob/kadishim-new (Example)
+Use for: Saving your code history to the cloud.
+
+===================================================
+LINKS & RESOURCES
+===================================================
+Production Site: https://kadishim.co.il
+Admin Panel:     https://kadishim.co.il/admin (Pass: admin123)
+Local Server:    http://localhost:5173
+API Endpoint:    https://kadishim.co.il/new/api
+
+===================================================
+NOTES
+===================================================
+* Do NOT edit files directly on the server (FTP). Always edit locally and deploy.
+* If you changed content (text/memorials) on the live site, run DEPLOY_SAFE.bat which effectively syncs it back to you before deploying.
+* All logic scripts are located in the '../scripts/' folder if you need to modify behavior.

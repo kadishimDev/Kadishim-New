@@ -1,0 +1,14 @@
+# Block access to sensitive configuration files
+<Files "config.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Prevent directory listing (so people can't see all files)
+Options -Indexes
+
+# Allow access to specific API endpoints (implicitly allowed, but good to be explicit if needed)
+<FilesMatch "^(save_message|save_request|get_messages|get_requests|status|sys_check)\.php$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { sendMessage } from '../services/distributionService';
+import { useSettings } from '../context/SettingsContext';
 
 const ContactForm = () => {
     const [formData, setFormData] = useState({
@@ -10,15 +12,46 @@ const ContactForm = () => {
     });
     const [status, setStatus] = useState('idle'); // idle, submitting, success, error
 
-    const handleSubmit = (e) => {
+    // Get settings to know where to send
+    const { settings } = useSettings();
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setStatus('submitting');
 
-        // Simulate API call
-        setTimeout(() => {
+        try {
+            // Send to contact email from settings, or fallback
+            const to = settings?.notifications?.contactEmail || 'contact@kadishim.co.il';
+            const subject = `פנייה חדשה מאתר קדישים: ${formData.name}`;
+            const html = `
+                <div dir="rtl" style="font-family: Arial, sans-serif;">
+                    <h2>פנייה חדשה מאתר קדישים</h2>
+                    <p><strong>שם:</strong> ${formData.name}</p>
+                    <p><strong>טלפון:</strong> ${formData.phone}</p>
+                    <p><strong>אימייל:</strong> ${formData.email}</p>
+                    <hr />
+                    <p><strong>תוכן ההודעה:</strong></p>
+                    <p style="white-space: pre-wrap;">${formData.message}</p>
+                </div>
+            `;
+
+            await sendMessage({
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+                message: formData.message,
+                html: html // We still pass HTML for the email body
+            });
+
             setStatus('success');
             setFormData({ name: '', email: '', phone: '', message: '' });
-        }, 1500);
+        } catch (error) {
+            console.error('Failed to send email:', error);
+            setStatus('error');
+            // Optional: Show error message to user
+            alert('אירעה שגיאה בשליחת ההודעה. אנא נסה שנית או צור קשר בטלפון.');
+            setStatus('idle');
+        }
     };
 
     if (status === 'success') {

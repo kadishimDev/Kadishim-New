@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, BookOpen, Download, User, ArrowLeft, Type, Printer, Settings } from 'lucide-react';
+import { Search, BookOpen, Download, User, ArrowLeft, Type, Printer, Image as ImageIcon } from 'lucide-react';
 import { tehillimLetters } from '../data/tehillimData';
 import { mishnayotLetters } from '../utils/mishnayotData';
 import mishnayotFull from '../data/mishnayot_full.json';
-import { prayerTexts } from '../utils/prayerText';
+import { prayerTexts, getGenderedText } from '../utils/prayerText';
 import { kaddishData } from '../data/kaddishData';
 import { transliterateName, isEnglish } from '../utils/nameConverter';
 import html2canvas from 'html2canvas'; // Keeping html2canvas for simple image generation if needed
@@ -47,7 +47,13 @@ const MemorialServiceGenerator = () => {
     const [generatedContent, setGeneratedContent] = useState(null);
     const [generationMeta, setGenerationMeta] = useState({ name: '', motherName: '' }); // Store resolved Hebrew names
     const [showNeshama, setShowNeshama] = useState(true);
-    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [isExportingPdf, setIsExportingPdf] = useState(false);
+    const [isExportingImage, setIsExportingImage] = useState(false);
+    const [pdfPages, setPdfPages] = useState([]); // Real-time calculated pages
+    const masterListRef = useRef(null);
+
+    // Pagination setup
+    const PAGE_HEIGHT_PX = 1123; // A4 height at 96 DPI
 
     const setActiveTab = (tab) => {
         setActiveTabState(tab);
@@ -96,24 +102,13 @@ const MemorialServiceGenerator = () => {
         }
 
         const nameLetters = decomposeName(processName);
-
-        // Add Ben/Bat and Mother Name letters
-        const benBatWord = isBat ? 'בת' : 'בן';
-        const benBatLetters = decomposeName(benBatWord).map(l => ({ ...l, isConnector: true })); // Mark as connector
-
-        // Helper to decompose mother name safely
-        const motherLetters = displayMother ? decomposeName(displayMother).map(l => ({ ...l, isMother: true })) : [];
-
-        // Neshama Letters
         const neshamaLetters = showNeshama ? ['נ', 'ש', 'מ', 'ה'].map(c => ({ char: c, normalized: c, isNeshama: true })) : [];
-
-        // Combined Sequence: Name -> Ben/Bat -> Mother -> Neshama
-        const allLetters = [...nameLetters, ...benBatLetters, ...motherLetters, ...neshamaLetters];
+        const allLetters = [...nameLetters, ...neshamaLetters];
 
         if (activeTab === 'tehillim') {
             const content = allLetters.map(item => ({
                 ...item,
-                data: tehillimLetters[item.normalized] || [],
+                data: tehillimLetters[item.normalized],
                 type: 'verse'
             }));
             setGeneratedContent(content);
@@ -121,32 +116,15 @@ const MemorialServiceGenerator = () => {
             const content = allLetters.map(item => ({
                 ...item,
                 meta: mishnayotLetters[item.normalized],
-                fullText: mishnayotFull[item.normalized] || "טקסט משנה...",
+                fullText: mishnayotFull[item.normalized] || "טקסט משנה זמני - יתווסף בהמשך",
                 type: 'mishnah'
             }));
             setGeneratedContent(content);
         } else if (activeTab === 'grave') {
             // Grave Service Composition based on user feedback (Full Traditional Order)
 
-            // 1. Tehillim for Name + Ben/Bat + Mother
-            // Note: User said "Prayer text itself... placed on Ben/Bat selection".
-            // And "Add letters for Ben/Bat and Mother".
-
-            const tehillimNameSection = allLetters.map(item => ({
-                ...item,
-                data: tehillimLetters[item.normalized],
-                type: 'verse'
-            }));
-            // Note: Neshama is already in allLetters if selected. 
-            // But Grave mode had separate sections.
-            // Let's keep the detailed sections for Grave, but include Ben/Bat/Mother in the "Name" section?
-            // Or just use the allLetters logic?
-            // "פרקי תהילים לפי שם הנפטר: [Name] [Ben] [Mother]"
-
-            // Re-using the manual composition for Grave to be precise
+            // 1. Tehillim for Name
             const tehillimName = nameLetters.map(item => ({ ...item, data: tehillimLetters[item.normalized], type: 'verse' }));
-            const tehillimBenBat = benBatLetters.map(item => ({ ...item, data: tehillimLetters[item.normalized], type: 'verse' }));
-            const tehillimMother = motherLetters.map(item => ({ ...item, data: tehillimLetters[item.normalized], type: 'verse' }));
 
             // 2. Tehillim for Neshama (N.S.M.H)
             const neshamaArr = ['נ', 'ש', 'מ', 'ה'].map(c => ({ char: c, normalized: c === 'ה' ? 'ה' : c === 'מ' ? 'מ' : c === 'ש' ? 'ש' : 'נ', isNeshama: true })); // Simple map
@@ -182,21 +160,28 @@ const MemorialServiceGenerator = () => {
                 };
             });
 
-
             // Clean display name (remove quotes if any)
             const cleanDisplay = displayName.replace(/['"״׳]/g, '').trim();
             const cleanMother = (displayMother || '').replace(/['"״׳]/g, '').trim();
 
             const prayerPart = [
-                { type: 'text', title: prayerTexts.intro.title, text: (gender === 'male' ? prayerTexts.intro.male : prayerTexts.intro.female).replace('[שם הנפטר/ת]', `**${cleanDisplay} ${benBatWord} ${cleanMother || '_____'}**`) },
+                // 1. New Custom Intro (Yehi Ratzon)
+                {
+                    type: 'text',
+                    title: "תפילה לפני הלימוד",
+                    text: getGenderedText(`יהי רצון מלפניך ה' א-לוהינו וא-לוהי אבותינו, שיעלה לרצון לימוד זה שאנחנו לומדים לשם נשמת המנוח/ה "${cleanDisplay}" בן/בת ${cleanMother || '______'}.
+ובזכות לימוד זה, האל הגדול הגיבור והנורא שוכת עד וקדוש שמו, שתצרור נשמתו/ה בצרור החיים, ותשים מחיצתו/ה במחיצת צדיקים חסידים יסודי עולם, העומדים לפניך ונהנים מזיו אור פניך, ותיתן לו/ה מהלכים בין העומדים לפניך, ותמחול ותסלח ותכפר ותמחה ותעביר כל מה שחטא/ה ושעוה/תה ופשע/ה לפניך, או עשה/תה דבר שלא כרצונך.
+ואל תזכור לו/ה שום חטא ועון ופשע ועבירה, אלא כל המצוות שעשה/תה תזכירם לו/ה לטובה. ורוחו/ה תרגיע בחלק היושבים בגן עדן, ונשמתו/ה תתעדן בטוב הצפון לצדיקים. ותשיב בכבוד מנוחתו/ה, ולקץ הימין יעמוד/תעמוד לגורלו/ה. וילווה אליו/ה השלום, ועל משכבו/ה יבא שלום: כדכתיב: יבוא שלום ינוחו על משכבותם. הולך נכחו: הוא וכל שוכני עמו ישראל בכלל הרחמים והסליחות והנחמות והישועות ונאמר אמן.
+
+לכו נרננה לה', נריעה לצור ישענו, נקדמה פניו בתודה, בזמירות נריע לו.
+כי אל גדול ה', ומלך גדול על כל אלהים.`, gender)
+                },
+
                 { type: 'header_info', text: `סדר אזכרה ל${gender === 'male' ? 'מנוח' : 'מנוחה'} ${cleanDisplay} ${isBat ? 'בת' : 'בן'} ${cleanMother || '______'}` },
 
-                // Tehillim Section (Name + Ben/Bat + Mother)
-                { type: 'section_title', text: `פרקי תהילים לפי שם: ${cleanDisplay} ${benBatWord} ${cleanMother}` },
+                // Tehillim Section
+                { type: 'section_title', text: getGenderedText(`פרקי תהילים לפי שם הנפטר/ת: ${cleanDisplay}`, gender) },
                 ...tehillimName,
-                // Separator or just continuation? Usually continuous.
-                ...tehillimBenBat,
-                ...tehillimMother,
 
                 { type: 'section_title', text: 'אותיות נשמה - קריעת רוע גזר הדין' }, // Neshama + Kra Satan
                 ...tehillimNeshama,
@@ -219,7 +204,7 @@ const MemorialServiceGenerator = () => {
                 { type: 'text', title: kaddishData[nusach].derabanan.title, text: kaddishData[nusach].derabanan.text },
 
                 // Prayer After
-                { type: 'text', title: prayerTexts.prayerAfter.title, text: (gender === 'male' ? prayerTexts.prayerAfter.male : prayerTexts.prayerAfter.female).replace('[שם הנפטר]', `**${cleanDisplay} ${benBatWord} ${cleanMother}**`) },
+                { type: 'text', title: prayerTexts.prayerAfter.title, text: getGenderedText(prayerTexts.prayerAfter.text.replace('[שם הנפטר]', `${cleanDisplay} בן/בת ${cleanMother || '______'}`), gender) },
 
                 // Michtam
                 { type: 'text', title: prayerTexts.michtam.title, text: prayerTexts.michtam.text },
@@ -231,7 +216,7 @@ const MemorialServiceGenerator = () => {
                 {
                     type: 'text',
                     title: "אל מלא רחמים",
-                    text: (gender === 'male' ? prayerTexts.elMaleh.male : prayerTexts.elMaleh.female).replace('[שם הנפטר/ת]', `**${cleanDisplay} ${benBatWord} ${cleanMother}**`)
+                    text: (gender === 'male' ? prayerTexts.elMaleh.male : prayerTexts.elMaleh.female).replace('[שם הנפטר/ת]', `${cleanDisplay} ${isBat ? 'בת' : 'בן'} ${cleanMother || '______'}`)
                 }
             ];
             setGeneratedContent(prayerPart);
@@ -239,163 +224,149 @@ const MemorialServiceGenerator = () => {
 
         // Store display names for the render view if simple generation
         if (activeTab !== 'grave') {
+            // We need a way to pass the converted names to the render view without changing the input state (optional, or we just rely on generated content?). 
+            // Actually, the render view uses 'name' and 'motherName' state variables.
+            // We should probably update a temp state or just force update the state?
+            // User might want to see the Hebrew name in the input box... usually better UX to update the input?
+            // Let's decide: implied requirement is "if user wrote SARAH, generate for Sarah". 
+            // The render view sees {name}. Let's update a separate state for "displayName" or just use the local variables if we pass them?
+            // Easiest: pass them in the content object or separate state.
+            // But 'generatedContent' is just the array.
+            // Let's create a 'generationMeta' state or similar.
             setGenerationMeta({ name: displayName, motherName: displayMother });
         }
     };
 
-    const handleDownloadPDF = async () => {
-        if (!printRef.current) return;
-        setIsGeneratingPdf(true);
+    const generateCanvas = async (element) => {
+        if (!element) return null;
+        try {
+            // Wait for images to load
+            const images = Array.from(element.getElementsByTagName('img'));
+            await Promise.all(images.map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                    img.onload = resolve;
+                    img.onerror = resolve; // Continue even if error
+                });
+            }));
+
+            // Small delay to ensure rendering matches
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                windowWidth: 1200
+            });
+            return canvas;
+        } catch (err) {
+            console.error("Canvas generation failed", err);
+            return null;
+        }
+    };
+
+    // Measurement-based pagination logic
+    const calculateLayout = (items) => {
+        if (!masterListRef.current) return [items];
+
+        const masterElement = masterListRef.current;
+        // Search for the nested space-y-4 container to get accurate item heights
+        const container = masterElement.querySelector('.space-y-4');
+        const children = container ? Array.from(container.children) : Array.from(masterElement.children);
+        const pages = [];
+        let currentPage = [];
+        let currentHeight = 0;
+        let pIdx = 0;
+
+        children.forEach((child, index) => {
+            const h = child.offsetHeight;
+            const item = items[index];
+
+            // Overhead for headers/footers (Measured in pixel buckets)
+            const headerHeight = pIdx === 0 ? 320 : 130;
+            const footerHeight = 90;
+            const availableHeight = PAGE_HEIGHT_PX - headerHeight - footerHeight;
+
+            if (currentHeight + h > availableHeight && currentPage.length > 0) {
+                pages.push(currentPage);
+                currentPage = [];
+                currentHeight = 0;
+                pIdx++;
+            }
+
+            currentPage.push(item);
+            currentHeight += h;
+        });
+
+        if (currentPage.length > 0) {
+            pages.push(currentPage);
+        }
+
+        return pages;
+    };
+
+    const handleDownloadImage = async () => {
+        setIsExportingImage(true);
+        const canvas = await generateCanvas(printRef.current);
+        if (!canvas) {
+            setIsExportingImage(false);
+            return;
+        }
 
         try {
-            const originalElement = printRef.current;
+            const imgData = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = imgData;
+            link.download = `tefilla_${name}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (err) {
+            console.error(err);
+            alert("שגיאה בשמירת התמונה.");
+        } finally {
+            setIsExportingImage(false);
+        }
+    };
 
-            // 1. Create Staging Area
-            const staging = document.createElement('div');
-            staging.style.position = 'absolute';
-            staging.style.left = '-9999px';
-            staging.style.top = '0';
-            staging.style.width = '210mm'; // A4 width
-            staging.style.backgroundColor = 'white';
-            document.body.appendChild(staging);
+    const handleDownloadPDF = async () => {
+        setIsExportingPdf(true);
+        try {
+            // Step 1: Trigger measurement pass by calculating layout from actual DOM heights
+            const calculated = calculateLayout(generatedContent);
+            setPdfPages(calculated);
 
-            // 2. Setup Constants
-            const CONTENT_WIDTH_PIXELS = originalElement.offsetWidth; // 793px usually
-            // We scale 190mm to px
-            const mmToPx = CONTENT_WIDTH_PIXELS / 190;
-            const PAGE_CONTENT_HEIGHT_PX = 277 * mmToPx; // 277mm usable height
+            // Step 2: Wait for React to render the pages in the hidden container
+            // Increased to 800ms to ensure all fonts and layout settle
+            await new Promise(r => setTimeout(r, 800));
 
-            // 3. Helper to create a Page
-            const createPage = () => {
-                const page = document.createElement('div');
-                page.style.width = '100%';
-                page.style.minHeight = `${PAGE_CONTENT_HEIGHT_PX}px`; // enforce height check
-                page.style.padding = '40px'; // Approx padding-10 (40px)
-                page.style.boxSizing = 'border-box';
-                page.style.backgroundColor = 'white';
-                page.style.position = 'relative';
-                // Copy font family
-                page.style.fontFamily = originalElement.style.fontFamily;
+            // Step 3: Find the hidden pages and capture them
+            const printContainer = document.getElementById('hidden-print-container');
+            const pageDivs = Array.from(printContainer.querySelectorAll('.pdf-page-final'));
 
-                // Add Border (Cloned from original)
-                const border1 = document.createElement('div');
-                border1.className = "absolute inset-4 border-[3px] border-double border-orange-200 pointer-events-none";
-                const border2 = document.createElement('div');
-                border2.className = "absolute inset-5 border border-orange-100 pointer-events-none";
-                page.appendChild(border1);
-                page.appendChild(border2);
+            if (pageDivs.length === 0) throw new Error("No pages rendered for export");
 
-                // Inner Content Container
-                const container = document.createElement('div');
-                container.className = "relative z-10 space-y-8"; // Use space-y-8 for spacing
-                container.style.direction = 'rtl';
-                page.appendChild(container);
-
-                return { page, container };
-            };
-
-            const pages = [];
-            let currentPageObj = createPage();
-            pages.push(currentPageObj);
-            staging.appendChild(currentPageObj.page);
-
-            // 4. Clone Header to Page 1
-            const originalHeader = originalElement.querySelector('.relative.z-10.flex'); // The header div
-            if (originalHeader) {
-                const headerClone = originalHeader.cloneNode(true);
-                // Insert before the container
-                currentPageObj.page.insertBefore(headerClone, currentPageObj.container);
-            }
-
-            // Footer text for Page 1
-            const footerText = document.createElement('div');
-            footerText.className = "absolute bottom-6 left-0 right-0 text-center text-xs text-gray-400";
-            footerText.innerText = 'הופק באמצעות אתר "קדישים" • כל הזכויות שמורות';
-            currentPageObj.page.appendChild(footerText);
-
-            // 5. Distribute Content
-            const contentSource = originalElement.querySelector('.space-y-8');
-            if (contentSource) {
-                const items = Array.from(contentSource.children);
-
-                for (const item of items) {
-                    const clone = item.cloneNode(true);
-
-                    // Temporarily append to check height
-                    currentPageObj.container.appendChild(clone);
-
-                    // Check if we exceeded page height
-                    // We check the 'bottom' of the container relative to the page
-                    // The page has a fixed printable height logic? 
-                    // No, simpler: check staging scroll height/offsets
-
-                    // Force layout update check?
-                    // We need to check if the CONTENT container height + header > PAGE_CAPACITY
-                    // But easier: the `page` element should be checked for total height?
-                    // Or just visual approximation.
-
-                    // Let's rely on bounding rects of the newly appended item vs the page bottom.
-                    // But we are off-screen.
-
-                    const pageRect = currentPageObj.page.getBoundingClientRect();
-                    const cloneRect = clone.getBoundingClientRect();
-
-                    // Relative bottom of the clone inside the page
-                    const relativeBottom = cloneRect.bottom - pageRect.top;
-
-                    // Limit is 277mm converted to px
-                    if (relativeBottom > PAGE_CONTENT_HEIGHT_PX) {
-                        // Overflow!
-                        // Remove from this page
-                        currentPageObj.container.removeChild(clone);
-
-                        // Create New Page
-                        currentPageObj = createPage();
-                        pages.push(currentPageObj);
-                        staging.appendChild(currentPageObj.page);
-
-                        // Append to new page
-                        currentPageObj.container.appendChild(clone);
-
-                        // Add Footer to new page too
-                        const footerClone = footerText.cloneNode(true);
-                        currentPageObj.page.appendChild(footerClone);
-                    }
-                }
-            }
-
-            // Wait for images/fonts
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            // 6. Generate PDF
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const pageWidth = 210;
-            const pageHeight = 297;
 
-            for (let i = 0; i < pages.length; i++) {
+            for (let i = 0; i < pageDivs.length; i++) {
+                const canvas = await generateCanvas(pageDivs[i]);
+                if (!canvas) continue;
+
                 if (i > 0) pdf.addPage();
 
-                const pageCanvas = await html2canvas(pages[i].page, {
-                    scale: 1.5,
-                    useCORS: true,
-                    backgroundColor: '#ffffff',
-                    logging: false
-                });
-
-                const imgData = pageCanvas.toDataURL('image/jpeg', 0.85);
-                pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight); // Full A4
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
             }
 
             pdf.save(`tefilla_${name}.pdf`);
-
-            // 7. Cleanup
-            document.body.removeChild(staging);
-
         } catch (err) {
             console.error(err);
-            alert("שגיאה ביצירת הקובץ.");
+            alert("שגיאה ביצירת הקובץ. נא לנסות שוב.");
         } finally {
-            setIsGeneratingPdf(false);
+            setIsExportingPdf(false);
         }
     };
 
@@ -444,13 +415,22 @@ const MemorialServiceGenerator = () => {
                             </div>
                         </div>
 
-                        <button
-                            onClick={handleDownloadPDF}
-                            disabled={isGeneratingPdf}
-                            className={`flex items-center gap-2 bg-gray-900 hover:bg-black text-white px-6 py-2 rounded-xl font-bold transition-all shadow-xl ${isGeneratingPdf ? 'opacity-70 cursor-wait' : ''}`}
-                        >
-                            {isGeneratingPdf ? 'מייצא...' : <><Download size={18} /> הורדה כ-PDF</>}
-                        </button>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={handleDownloadPDF}
+                                disabled={isExportingPdf || isExportingImage}
+                                className={`flex items-center gap-2 bg-gray-900 hover:bg-black text-white px-6 py-2 rounded-xl font-bold transition-all shadow-xl ${(isExportingPdf || isExportingImage) ? 'opacity-70 cursor-wait' : ''}`}
+                            >
+                                {isExportingPdf ? 'מייצר PDF...' : <><Download size={18} /> הורדה כ-PDF</>}
+                            </button>
+                            <button
+                                onClick={handleDownloadImage}
+                                disabled={isExportingPdf || isExportingImage}
+                                className={`flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-xl font-bold transition-all shadow-xl ${(isExportingPdf || isExportingImage) ? 'opacity-70 cursor-wait' : ''}`}
+                            >
+                                {isExportingImage ? 'מייצר תמונה...' : <><ImageIcon size={18} /> הורדה כתמונה</>}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -467,34 +447,40 @@ const MemorialServiceGenerator = () => {
 
                         {/* Header Section */}
                         <div className="relative z-10 flex justify-between items-start border-b-2 border-orange-100 pb-8 mb-10">
-                            {/* Right: Logo */}
-                            <div className="w-24 h-24 flex items-center justify-center">
-                                {/* Use actual logo path if exists, otherwise placeholder styling */}
-                                <img src="/assets/logo.png" alt="לוגו האתר" className="max-w-full max-h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block' }} />
-                                <div className="hidden text-orange-600 font-bold border-2 border-orange-600 rounded-full p-2 text-center text-xs w-20 h-20 flex items-center justify-center" style={{ display: 'none' }}>
-                                    קדיש<br />וזיכרון
-                                </div>
+                            {/* Left: Rabbi Image (Real Asset) */}
+                            <div className="w-24 h-32 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden shadow-sm order-first">
+                                <img
+                                    src="/assets/rabbi_moshe.jpg"
+                                    alt="הרב משה בן-טוב"
+                                    crossOrigin="anonymous"
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-xs text-gray-400 text-center p-1">תמונת<br/>הרב</div>' }}
+                                />
                             </div>
 
                             {/* Center: Title */}
-                            <div className="text-center pt-2">
+                            <div className="text-center pt-2 flex-1">
                                 <h1 className="text-4xl font-bold text-gray-900 mb-3 tracking-wide" style={{ fontFamily: selectedFont.fontFamily }}>
                                     {activeTab === 'grave' ? 'סדר אזכרה והנצחה' : `לימוד ${activeTab === 'tehillim' ? 'תהילים' : 'משניות'} לעילוי נשמה`}
                                 </h1>
                                 <div className="text-xl text-gray-700 font-medium" style={{ fontFamily: selectedFont.fontFamily }}>
-                                    לעילוי נשמת <span className="font-bold text-gray-900">{generationMeta.name || name}</span> {isBat ? 'בת' : 'בן'} <span className="font-bold">{generationMeta.motherName || motherName || '______'}</span>
+                                    לעילוי נשמת {gender === 'male' ? 'המנוח' : 'המנוחה'} <span className="font-bold text-gray-900">{generationMeta.name || name}</span> {isBat ? 'בת' : 'בן'} <span className="font-bold">{generationMeta.motherName || motherName || '______'}</span>
                                 </div>
-                                <div className="text-sm text-gray-400 mt-2">הופק ע"י ארגון "קדישים"</div>
+                                <div className="text-sm text-gray-400 mt-2">הופק ע"י ארגון "קדישים" - kadishim.co.il</div>
                             </div>
 
-                            {/* Left: Rabbi Image (Real Asset) */}
-                            <div className="w-24 h-32 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                            {/* Right: Logo */}
+                            <div className="w-32 h-32 flex items-center justify-center order-last">
                                 <img
-                                    src="/assets/rabbi_moshe.jpg"
-                                    alt="הרב משה בן-טוב"
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-xs text-gray-400 text-center p-1">תמונת<br/>הרב</div>' }}
+                                    src="/assets/logo.png"
+                                    alt="לוגו האתר"
+                                    crossOrigin="anonymous"
+                                    className="max-w-full max-h-full object-contain"
+                                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block' }}
                                 />
+                                <div className="hidden text-orange-600 font-bold border-2 border-orange-600 rounded-full p-2 text-center text-xs w-20 h-20 flex items-center justify-center" style={{ display: 'none' }}>
+                                    קדיש<br />וזיכרון
+                                </div>
                             </div>
                         </div>
 
@@ -527,11 +513,7 @@ const MemorialServiceGenerator = () => {
                                 if (item.type === 'text') return (
                                     <div key={idx} className="bg-orange-50/30 p-6 rounded-xl text-center border border-orange-100 my-6">
                                         <h3 className="font-bold text-xl mb-3 text-orange-900">{item.title}</h3>
-                                        <p className="whitespace-pre-wrap leading-[2]">
-                                            {item.text.split('**').map((part, i) =>
-                                                i % 2 === 1 ? <span key={i} className="font-bold text-gray-900 border-b border-orange-300">{part}</span> : part
-                                            )}
-                                        </p>
+                                        <p className="whitespace-pre-wrap leading-[2]">{item.text}</p>
                                     </div>
                                 );
                                 if (item.type === 'section_title') return (
@@ -550,6 +532,128 @@ const MemorialServiceGenerator = () => {
                         <div className="absolute bottom-6 left-0 right-0 text-center text-xs text-gray-400">
                             הופק באמצעות אתר "קדישים" • כל הזכויות שמורות
                         </div>
+                    </div>
+                </div>
+                {/* Hidden Multi-Page PDF Renderer (Must be in DOM for html2canvas) */}
+                {/* Hidden Multi-Page PDF Renderer (Measurement & Final Generation) */}
+                <div className="absolute opacity-0 pointer-events-none -left-[9999px] top-0 overflow-visible w-[210mm]">
+                    {/* Master Renderer for measuring item heights - MOULDED TO A4 DIMENSIONS */}
+                    <div ref={masterListRef} className={`bg-white p-16 ${selectedSize.id}`} style={{ width: '210mm', minHeight: '297mm', fontSize: `${16 * selectedSize.scale}px`, fontFamily: selectedFont.fontFamily }}>
+                        <div className="space-y-4">
+                            {generatedContent.map((item, idx) => (
+                                <div key={idx} className="measurement-item bg-white">
+                                    {item.type === 'verse' && (
+                                        <div className="mb-3">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full font-bold border bg-orange-50 text-orange-800 border-orange-200" style={{ fontSize: '12px' }}>{item.char}</span>
+                                            </div>
+                                            <div className="text-justify leading-relaxed text-gray-900">
+                                                {item.data ? item.data.map((l, i) => <span key={i}>{l} </span>) : '...'}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {item.type === 'mishnah' && (
+                                        <div className="mb-4">
+                                            <div className="font-bold text-gray-600 mb-1" style={{ fontSize: `${12 * selectedSize.scale}px` }}>{item.meta?.tractate} פרק {item.meta?.chapter}</div>
+                                            <p className="text-justify leading-relaxed text-gray-900 pl-4 border-r-2 border-blue-100">{item.fullText}</p>
+                                        </div>
+                                    )}
+                                    {item.type === 'text' && (
+                                        <div className="bg-orange-50/20 p-4 rounded-xl text-center border border-orange-100 my-3">
+                                            <h3 className="font-bold mb-2 text-orange-900" style={{ fontSize: `${18 * selectedSize.scale}px` }}>{item.title}</h3>
+                                            <p className="whitespace-pre-wrap leading-relaxed">{item.text}</p>
+                                        </div>
+                                    )}
+                                    {item.type === 'section_title' && (
+                                        <h3 className="font-bold text-center text-gray-800 border-b-2 border-orange-500 inline-block px-4 pb-1 mb-3 mt-3 mx-auto block w-max" style={{ fontSize: `${20 * selectedSize.scale}px` }}>{item.text}</h3>
+                                    )}
+                                    {item.type === 'header_info' && (
+                                        <div className="text-center text-gray-500 font-medium opacity-75 mb-3 italic py-1 bg-gray-50 rounded" style={{ fontSize: `${14 * selectedSize.scale}px` }}>{item.text}</div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div id="hidden-print-container">
+                        {pdfPages.map((pageItems, pageIdx) => (
+                            <div
+                                key={pageIdx}
+                                className="bg-white p-16 relative mb-10 w-[210mm] h-[297mm] overflow-hidden pdf-page-final"
+                                style={{ fontFamily: selectedFont.fontFamily }}
+                            >
+                                {/* Decorative Border */}
+                                <div className="absolute inset-4 border-[3px] border-double border-orange-200 pointer-events-none"></div>
+                                <div className="absolute inset-5 border border-orange-100 pointer-events-none"></div>
+
+                                {/* Header (Only on Page 1) */}
+                                {pageIdx === 0 && (
+                                    <div className="relative z-10 flex justify-between items-start border-b-2 border-orange-100 pb-8 mb-10">
+                                        <div className="w-24 h-32 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden shadow-sm order-first">
+                                            <img src="/assets/rabbi_moshe.jpg" crossOrigin="anonymous" className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="text-center pt-2 flex-1">
+                                            <h1 className="text-4xl font-bold text-gray-900 mb-3 tracking-wide">{activeTab === 'grave' ? 'סדר אזכרה והנצחה' : `לימוד ${activeTab === 'tehillim' ? 'תהילים' : 'משניות'}`}</h1>
+                                            <div className="text-xl text-gray-700 font-medium">לעילוי נשמת {gender === 'male' ? 'המנוח' : 'המנוחה'} {generationMeta.name} {isBat ? 'בת' : 'בן'} {generationMeta.motherName}</div>
+                                            <div className="text-sm text-gray-400 mt-2">kadishim.co.il</div>
+                                        </div>
+                                        <div className="w-32 h-32 flex items-center justify-center order-last">
+                                            <img src="/assets/logo.png" crossOrigin="anonymous" className="max-w-full max-h-full object-contain" />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Simple Header on Page 2+ */}
+                                {pageIdx > 0 && (
+                                    <div className="relative z-10 flex justify-between items-center border-b border-orange-50 pb-4 mb-8">
+                                        <div className="text-xs text-gray-400">לעילוי נשמת {generationMeta.name} {isBat ? 'בת' : 'בן'} {generationMeta.motherName}</div>
+                                        <div className="text-lg font-bold text-orange-600">ארגון קדישים</div>
+                                        <div className="text-xs text-gray-400">עמוד {pageIdx + 1}</div>
+                                    </div>
+                                )}
+
+                                {/* Content Body */}
+                                <div className={`space-y-4 relative z-10 ${selectedSize.id}`} style={{ fontSize: `${16 * selectedSize.scale}px` }}>
+                                    {pageItems.map((item, idx) => (
+                                        <div key={idx} className="page-break-inside-avoid">
+                                            {item.type === 'verse' && (
+                                                <div className="mb-3">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full font-bold border bg-orange-50 text-orange-800 border-orange-200" style={{ fontSize: '12px' }}>{item.char}</span>
+                                                    </div>
+                                                    <div className="text-justify leading-relaxed text-gray-900">
+                                                        {item.data ? item.data.map((l, i) => <span key={i}>{l} </span>) : '...'}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {item.type === 'mishnah' && (
+                                                <div className="mb-4">
+                                                    <div className="font-bold text-gray-600 mb-1" style={{ fontSize: `${12 * selectedSize.scale}px` }}>{item.meta?.tractate} פרק {item.meta?.chapter}</div>
+                                                    <p className="text-justify leading-relaxed text-gray-900 pl-4 border-r-2 border-blue-100">{item.fullText}</p>
+                                                </div>
+                                            )}
+                                            {item.type === 'text' && (
+                                                <div className="bg-orange-50/20 p-4 rounded-xl text-center border border-orange-100 my-3">
+                                                    <h3 className="font-bold mb-2 text-orange-900" style={{ fontSize: `${18 * selectedSize.scale}px` }}>{item.title}</h3>
+                                                    <p className="whitespace-pre-wrap leading-relaxed">{item.text}</p>
+                                                </div>
+                                            )}
+                                            {item.type === 'section_title' && (
+                                                <h3 className="font-bold text-center text-gray-800 border-b-2 border-orange-500 inline-block px-4 pb-1 mb-3 mt-3 mx-auto block w-max" style={{ fontSize: `${20 * selectedSize.scale}px` }}>{item.text}</h3>
+                                            )}
+                                            {item.type === 'header_info' && (
+                                                <div className="text-center text-gray-500 font-medium opacity-75 mb-3 italic py-1 bg-gray-50 rounded" style={{ fontSize: `${14 * selectedSize.scale}px` }}>{item.text}</div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Footer */}
+                                <div className="absolute bottom-6 left-0 right-0 text-center text-[10px] text-gray-300">
+                                    הופק ע"י ארגון קדישים • עמוד {pageIdx + 1}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -615,7 +719,7 @@ const MemorialServiceGenerator = () => {
                             <label className="flex items-center cursor-pointer group">
                                 <div className="relative">
                                     <input type="checkbox" id="neshama" checked={showNeshama} onChange={(e) => setShowNeshama(e.target.checked)} className="peer sr-only" />
-                                    <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                    <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
                                 </div>
                                 <span className="mr-3 font-medium text-gray-700 group-hover:text-orange-700 transition-colors">הוסף אותיות "נשמה"</span>
                             </label>

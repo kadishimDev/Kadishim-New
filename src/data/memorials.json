@@ -6,7 +6,7 @@
     "mother_name": "",
     "gender": "male",
     "type": "kaddish",
-    "hebrew_date_text": "",
+    "hebrew_date_text": "כ\"ח בשבט, התש\"פ",
     "gregorian_date": "",
     "residence": "",
     "children_names": "",
@@ -16,6 +16,11 @@
     "created_at": "2021-07-02 10:50:33",
     "details": {
       "post_status": "publish"
+    },
+    "hebrew_date_struct": {
+      "day": 28,
+      "month": 5,
+      "year": 5780
     }
   },
   {
@@ -25,7 +30,7 @@
     "mother_name": "dklsjgfh",
     "gender": "male",
     "type": "kaddish",
-    "hebrew_date_text": "כ\"ג בטבת, התש\"ס",
+    "hebrew_date_text": "כ\"ח בשבט, התש\"פ",
     "gregorian_date": "0",
     "residence": "lkjhd lkjds, dskjh (ldjkgh)",
     "children_names": "",
@@ -39,9 +44,9 @@
       "original_form_id": "field_60ddb5cbe0c20"
     },
     "hebrew_date_struct": {
-      "day": 23,
-      "month": 10,
-      "year": 5760
+      "day": 28,
+      "month": 5,
+      "year": 5780
     }
   },
   {
@@ -51,7 +56,7 @@
     "mother_name": "test fater",
     "gender": "male",
     "type": "kaddish",
-    "hebrew_date_text": "כ\"ג בטבת, התש\"ס",
+    "hebrew_date_text": "כ\"ח בשבט, התש\"פ",
     "gregorian_date": "0",
     "residence": "strt 10, hometwn (neighbor)",
     "children_names": "",
@@ -65,9 +70,9 @@
       "original_form_id": "field_60ddb5cbe0c20"
     },
     "hebrew_date_struct": {
-      "day": 23,
-      "month": 10,
-      "year": 5760
+      "day": 28,
+      "month": 5,
+      "year": 5780
     }
   },
   {
@@ -77,7 +82,7 @@
     "mother_name": "",
     "gender": "male",
     "type": "kaddish",
-    "hebrew_date_text": "כ\"ג בטבת, התש\"ס",
+    "hebrew_date_text": "כ\"ח בשבט, התש\"פ",
     "gregorian_date": "0",
     "residence": "",
     "children_names": "",
@@ -91,9 +96,9 @@
       "original_form_id": "field_60ddb5cbe0c20"
     },
     "hebrew_date_struct": {
-      "day": 23,
-      "month": 10,
-      "year": 5760
+      "day": 28,
+      "month": 5,
+      "year": 5780
     }
   },
   {
@@ -103,7 +108,7 @@
     "mother_name": "",
     "gender": "male",
     "type": "kaddish",
-    "hebrew_date_text": "כ\"ג בטבת, התש\"ס",
+    "hebrew_date_text": "כ\"ח בשבט, התש\"פ",
     "gregorian_date": "0",
     "residence": "",
     "children_names": "",
@@ -117,9 +122,9 @@
       "original_form_id": "field_60ddb5cbe0c20"
     },
     "hebrew_date_struct": {
-      "day": 23,
-      "month": 10,
-      "year": 5760
+      "day": 28,
+      "month": 5,
+      "year": 5780
     }
   },
   {

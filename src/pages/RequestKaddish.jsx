@@ -1,68 +1,165 @@
-import React, { useState } from 'react';
-import { Send, Check, ArrowRight, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Send, Check, ArrowRight, Calendar, UserPlus, Globe } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useSettings } from '../context/SettingsContext';
+import { sendKaddishRequest } from '../services/distributionService';
+import HebrewDatePicker from '../components/HebrewDatePicker';
+import { HDate, gematriya } from '@hebcal/core';
+import { formatHebrewDate, getStructuredHebrewDate } from '../utils/dateUtils';
 
 const RequestKaddish = () => {
+    const { settings } = useSettings();
+    const [status, setStatus] = useState('idle'); // idle, submitting, success, error
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [datePickerTarget, setDatePickerTarget] = useState('death'); // 'death' or 'birth'
+
     const [formData, setFormData] = useState({
-        // Requester Details
-        requester_first_name: '',
-        requester_last_name: '',
-        requester_phone_prefix: '050',
-        requester_phone: '',
+        deceased_name: '',
+        deceased_father_name: '',
+        deceased_mother_name: '',
+        gender: 'male',
+
+        hebrew_death_day: '',
+        hebrew_death_month: '',
+        hebrew_death_year: '',
+        gregorian_death_date: '',
+        death_after_sunset: false,
+
+        hebrew_birth_day: '',
+        hebrew_birth_month: '',
+        hebrew_birth_year: '',
+        gregorian_birth_date: '',
+
+        requester_name: '',
         requester_email: '',
+        requester_phone: '',
+        requester_relation: '',
+
         requester_city: '',
         requester_street: '',
         requester_house_number: '',
         requester_apartment: '',
         requester_zip: '',
 
-        // Deceased Details
-        relationship: '',
-        deceased_first_name: '',
-        deceased_last_name: '',
-        deceased_gender: 'son_of', // 'son_of' (Ben) or 'daughter_of' (Bat)
-        father_name: '',
-        mother_name: '', // NEW
-        calendar_type: 'hebrew', // 'hebrew' or 'gregorian'
-        death_date_day: '',
-        death_date_month: '',
-        death_date_year: '',
-        death_after_sunset: false
+        notes: ''
     });
 
-    const [status, setStatus] = useState('idle');
-
     const handleChange = (e) => {
-        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-        setFormData({ ...formData, [e.target.name]: value });
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleDateSelect = (selectedDateObj) => {
+        if (!selectedDateObj) return;
+        try {
+            let hDate = selectedDateObj instanceof HDate ? selectedDateObj : new HDate(selectedDateObj);
+
+            // Use structured formatter
+            const { day, month, year } = getStructuredHebrewDate(hDate);
+
+            const gregDate = hDate.greg();
+            const gregStr = gregDate.toISOString().split('T')[0];
+
+            if (datePickerTarget === 'death') {
+                setFormData(prev => ({
+                    ...prev,
+                    hebrew_death_day: day,
+                    hebrew_death_month: month,
+                    hebrew_death_year: year,
+                    gregorian_death_date: gregStr
+                }));
+            } else {
+                setFormData(prev => ({
+                    ...prev,
+                    hebrew_birth_day: day,
+                    hebrew_birth_month: month,
+                    hebrew_birth_year: year,
+                    gregorian_birth_date: gregStr
+                }));
+            }
+        } catch (e) {
+            console.error("Date Selection Error:", e);
+        }
+    };
+
+    const handleGregorianChange = (target, value) => {
+        if (!value) return;
+        try {
+            const d = new Date(value);
+            const hDate = new HDate(d);
+
+            // Auto convert using structured formatter
+            const { day, month, year } = getStructuredHebrewDate(hDate);
+
+            if (target === 'death') {
+                setFormData(prev => ({
+                    ...prev,
+                    gregorian_death_date: value,
+                    hebrew_death_day: day,
+                    hebrew_death_month: month,
+                    hebrew_death_year: year
+                }));
+            } else {
+                setFormData(prev => ({
+                    ...prev,
+                    gregorian_birth_date: value,
+                    hebrew_birth_day: day,
+                    hebrew_birth_month: month,
+                    hebrew_birth_year: year
+                }));
+            }
+        } catch (e) {
+            console.error("Invalid Date", e);
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setStatus('submitting');
-        // Simulating API
-        setTimeout(() => setStatus('success'), 1500);
+
+        // Basic Validation
+        if (!formData.deceased_name || !formData.deceased_mother_name) {
+            alert('נא למלא שם הנפטר ושם האם');
+            setStatus('idle');
+            return;
+        }
+
+        if (!formData.hebrew_death_day && !formData.gregorian_death_date) {
+            alert('נא להזין תאריך פטירה (עברי או לועזי)');
+            setStatus('idle');
+            return;
+        }
+
+        try {
+            await sendKaddishRequest(formData);
+            setStatus('success');
+            // Optional: Reset form or redirect
+        } catch (error) {
+            console.error(error);
+            setStatus('error');
+            alert('אירעה שגיאה בשליחת הבקשה. אנא נסה שנית.');
+        }
     };
 
     if (status === 'success') {
         return (
-            <div className="min-h-screen bg-light flex items-center justify-center p-6">
-                <div className="bg-white p-12 rounded-2xl shadow-xl max-w-xl w-full text-center space-y-8 animate-fade-in border-t-8 border-primary">
-                    <div className="w-24 h-24 bg-green-100 text-green-600 mx-auto rounded-full flex items-center justify-center mb-6">
-                        <Check size={48} />
+            <div className="min-h-screen flex flex-col items-center justify-center bg-light p-4 text-center">
+                <div className="bg-white p-10 rounded-2xl shadow-xl max-w-lg w-full transform transition-all animate-fade-in-up">
+                    <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Check size={48} className="text-green-600" />
                     </div>
-                    <h2 className="text-4xl font-bold text-dark">הבקשה התקבלה בהצלחה</h2>
-                    <p className="text-xl text-gray-600 leading-relaxed">
-                        תודה רבה לך, {formData.requester_first_name}.<br />
-                        פרטי הבקשה לעילוי נשמת <br />
-                        <span className="font-bold text-dark text-2xl">{formData.deceased_first_name} {formData.deceased_last_name}</span> <br />
-                        נקלטו במערכת והועברו לטיפול.
+                    <h2 className="text-3xl font-bold text-gray-800 mb-4">הבקשה התקבלה בהצלחה!</h2>
+                    <p className="text-gray-600 text-lg mb-8">
+                        פרטי הנפטר/ת נרשמו במערכת ויועברו לאברכי הכולל לאמירת קדיש וללימוד משניות.
+                        <br />
+                        תזכורת תשלח אליכם לקראת יום השנה.
                     </p>
-                    <div className="pt-8">
-                        <button onClick={() => setStatus('idle')} className="text-primary font-bold underline hover:text-dark transition-colors text-lg">
-                            הגש בקשה נוספת
-                        </button>
-                    </div>
+                    <Link to="/" className="inline-flex items-center text-primary font-bold hover:underline">
+                        חזרה לדף הבית <ArrowRight className="mr-2" size={20} />
+                    </Link>
                 </div>
             </div>
         );
@@ -70,146 +167,133 @@ const RequestKaddish = () => {
 
     return (
         <div className="min-h-screen bg-light py-12 px-4 md:px-8">
-            <div className="max-w-5xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden">
-                {/* Header */}
-                <div className="bg-dark text-white p-10 md:p-16 text-center relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-                    <Link to="/" className="absolute top-8 right-8 text-white/60 hover:text-white flex items-center gap-2 transition-colors">
-                        <ArrowRight size={20} /> חזרה
-                    </Link>
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4 relative z-10">טופס בקשת קדיש</h1>
-                    <p className="text-xl text-gray-400 font-light relative z-10">
-                        אנא מלאו את הפרטים במדויק על מנת שנוכל להנציח את יקירכם כראוי.
+            <div className="max-w-4xl mx-auto space-y-8">
+                <div className="text-center space-y-4">
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-600 leading-tight">
+                        בקשת אמירת קדיש
+                    </h1>
+                    <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                        הנצחת יקיריכם על ידי אברכי כולל "יצחק" בירושלים. השירות ניתן ללא עלות כחלק ממפעל החסד.
                     </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-8 md:p-16 space-y-12">
+                <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl overflow-hidden p-8 md:p-12 space-y-12">
 
-                    {/* SECTION 1: DECEASED INFO */}
+                    {/* Section 1: Deceased Info */}
                     <div className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-gray-100 pb-2">
-                            <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-dark font-bold">1</div>
-                            <h3 className="text-2xl font-bold text-dark">פרטי הנפטר/ת</h3>
-                        </div>
+                        <h4 className="font-bold text-gray-700 text-xl border-r-4 border-primary pr-3 flex items-center gap-2">
+                            <UserPlus size={24} />
+                            פרטי הנפטר/ת
+                        </h4>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <InputGroup label="שם פרטי" name="deceased_first_name" onChange={handleChange} required />
-                            <InputGroup label="שם משפחה" name="deceased_last_name" onChange={handleChange} required />
-                            <div className="md:col-span-1">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">קירבה לנפטר</label>
-                                <select name="relationship" onChange={handleChange} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:border-primary outline-none">
-                                    <option value="">בחר/י קירבה...</option>
-                                    <option value="father">אבא</option>
-                                    <option value="mother">אמא</option>
-                                    <option value="brother">אח/אחות</option>
-                                    <option value="spouse">בעל/אישה</option>
-                                    <option value="son">בן/בת</option>
-                                    <option value="grandfather">סבא/סבתא</option>
-                                    <option value="other">אחר</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                            <div className="md:col-span-1">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">בן / בת ?</label>
-                                <select name="deceased_gender" onChange={handleChange} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:border-primary outline-none">
-                                    <option value="son_of">בן (ר' פלוני בן...)</option>
-                                    <option value="daughter_of">בת (מרת פלונית בת...)</option>
-                                </select>
-                            </div>
-                            <InputGroup label="שם האב" name="father_name" placeholder="למשל: יצחק" onChange={handleChange} required />
-                            <InputGroup label="שם האם" name="mother_name" placeholder="למשל: שרה" onChange={handleChange} required />
-                        </div>
-
-                        {/* Extra Details */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <InputGroup label="מקום מגורים (עיר)" name="memorial_residence" placeholder="למשל: ירושלים" onChange={handleChange} />
-                            <div className="md:col-span-1">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">שמות הילדים (מופרד בפסיקים)</label>
-                                <textarea name="memorial_children" onChange={handleChange} rows="1" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:border-primary outline-none resize-none" placeholder="משה, דוד, רות..."></textarea>
-                            </div>
-                        </div>
+                            <InputGroup label="שם הנפטר/ת (פרטי + משפחה)" name="deceased_name" required onChange={handleChange} />
 
-                        {/* Dates Section */}
-                        <div className="bg-yellow-50 p-6 rounded-xl border border-yellow-100 space-y-6">
-                            <h4 className="font-bold text-dark text-lg border-b border-yellow-200 pb-2">תאריכים חשובים</h4>
-
-                            {/* Death Date */}
-                            <div>
-                                <h5 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><Calendar size={18} /> תאריך פטירה (חובה להזין לפחות אחד)</h5>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label className="text-sm font-bold text-gray-500 mb-2 block">תאריך עברי</label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            <input type="number" name="hebrew_death_day" placeholder="יום" className="p-2 border rounded text-center w-full" onChange={handleChange} />
-                                            <input type="text" name="hebrew_death_month" placeholder="חודש" className="p-2 border rounded text-center w-full" onChange={handleChange} />
-                                            <input type="text" name="hebrew_death_year" placeholder="שנה" className="p-2 border rounded text-center w-full" onChange={handleChange} />
-                                        </div>
-                                        <label className="flex items-center gap-2 text-xs text-gray-500 mt-2 cursor-pointer">
-                                            <input type="checkbox" name="death_after_sunset" onChange={handleChange} className="rounded text-primary" />
-                                            נפטר לאחר השקיעה?
-                                        </label>
-                                    </div>
-                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label className="text-sm font-bold text-gray-500 mb-2 block">תאריך לועזי</label>
-                                        <input type="date" name="gregorian_death_date" className="p-2 border rounded w-full" onChange={handleChange} />
-                                    </div>
-                                </div>
+                            <div className="md:col-span-2 grid grid-cols-2 gap-6">
+                                <InputGroup label="שם האב" name="deceased_father_name" onChange={handleChange} />
+                                <InputGroup label="שם האם" name="deceased_mother_name" required onChange={handleChange} />
                             </div>
 
-                            {/* Birth Date (Optional) */}
-                            <div>
-                                <h5 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><Calendar size={18} /> תאריך לידה (אופציונלי)</h5>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label className="text-sm font-bold text-gray-500 mb-2 block">תאריך עברי</label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            <input type="number" name="hebrew_birth_day" placeholder="יום" className="p-2 border rounded text-center w-full" onChange={handleChange} />
-                                            <input type="text" name="hebrew_birth_month" placeholder="חודש" className="p-2 border rounded text-center w-full" onChange={handleChange} />
-                                            <input type="text" name="hebrew_birth_year" placeholder="שנה" className="p-2 border rounded text-center w-full" onChange={handleChange} />
-                                        </div>
-                                    </div>
-                                    <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                        <label className="text-sm font-bold text-gray-500 mb-2 block">תאריך לועזי</label>
-                                        <input type="date" name="gregorian_birth_date" className="p-2 border rounded w-full" onChange={handleChange} />
-                                    </div>
+                            <div className="flex flex-col space-y-2">
+                                <label className="text-sm font-bold text-gray-700">מין הנפטר</label>
+                                <div className="flex gap-4">
+                                    <label className="flex items-center gap-2 cursor-pointer p-3 bg-gray-50 rounded-lg flex-1 hover:bg-gray-100 transition">
+                                        <input type="radio" name="gender" value="male" checked={formData.gender === 'male'} onChange={handleChange} className="text-primary focus:ring-primary" />
+                                        <span className="font-medium">זכר (בן)</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer p-3 bg-gray-50 rounded-lg flex-1 hover:bg-gray-100 transition">
+                                        <input type="radio" name="gender" value="female" checked={formData.gender === 'female'} onChange={handleChange} className="text-primary focus:ring-primary" />
+                                        <span className="font-medium">נקבה (בת)</span>
+                                    </label>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* SECTION 2: REQUESTER INFO */}
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-gray-100 pb-2">
-                            <div className="w-10 h-10 bg-dark text-white rounded-full flex items-center justify-center font-bold">2</div>
-                            <h3 className="text-2xl font-bold text-dark">פרטי המבקש/ת</h3>
-                        </div>
+                    {/* Dates Section */}
+                    <div className="bg-yellow-50 p-6 rounded-xl border border-yellow-100 space-y-6">
+                        <h4 className="font-bold text-dark text-lg border-b border-yellow-200 pb-2">תאריכים חשובים</h4>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <InputGroup label="שם פרטי" name="requester_first_name" onChange={handleChange} required />
-                            <InputGroup label="שם משפחה" name="requester_last_name" onChange={handleChange} required />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="md:col-span-1">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">טלפון נייד</label>
-                                <div className="flex" dir="ltr">
-                                    <select name="requester_phone_prefix" onChange={handleChange} className="p-3 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg w-24 outline-none">
-                                        <option>050</option><option>052</option><option>053</option><option>054</option><option>055</option><option>058</option>
-                                    </select>
-                                    <input type="tel" name="requester_phone" required onChange={handleChange} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-r-lg outline-none" placeholder="1234567" />
+                        {/* Death Date */}
+                        <div>
+                            <h5 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><Calendar size={18} /> תאריך פטירה (חובה להזין לפחות אחד)</h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="bg-white p-4 rounded-lg border border-gray-200 relative">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className="text-sm font-bold text-gray-500">תאריך עברי</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setDatePickerTarget('death'); setShowDatePicker(true); }}
+                                            className="text-xs bg-primary text-white px-2 py-1 rounded hover:bg-orange-600 transition"
+                                        >
+                                            בחר יום 📅
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <input type="text" name="hebrew_death_day" value={formData.hebrew_death_day || ''} placeholder="יום (למשל: י')" className="p-2 border rounded text-center w-full" onChange={handleChange} />
+                                        <input type="text" name="hebrew_death_month" value={formData.hebrew_death_month || ''} placeholder="חודש" className="p-2 border rounded text-center w-full" onChange={handleChange} />
+                                        <input type="text" name="hebrew_death_year" value={formData.hebrew_death_year || ''} placeholder="שנה" className="p-2 border rounded text-center w-full" onChange={handleChange} />
+                                    </div>
+                                    <label className="flex items-center gap-2 text-xs text-gray-500 mt-2 cursor-pointer">
+                                        <input type="checkbox" name="death_after_sunset" checked={formData.death_after_sunset} onChange={handleChange} className="rounded text-primary" />
+                                        נפטר לאחר השקיעה?
+                                    </label>
+                                </div>
+                                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                    <label className="text-sm font-bold text-gray-500 mb-2 block">תאריך לועזי</label>
+                                    <input type="date" name="gregorian_death_date" value={formData.gregorian_death_date || ''} className="p-2 border rounded w-full" onChange={handleChange} />
+                                    <p className="text-[10px] text-gray-400 mt-1">* המערכת תמיר אוטומטית בין התאריכים</p>
                                 </div>
                             </div>
-                            <div className="md:col-span-2">
-                                <InputGroup label="כתובת אימייל" name="requester_email" type="email" dir="ltr" onChange={handleChange} required />
-                            </div>
                         </div>
 
-                        <div className="bg-gray-50 p-6 rounded-xl space-y-4">
-                            <h4 className="font-bold text-gray-700">כתובת למשלוח קבלות</h4>
+                        {/* Birth Date (Optional) */}
+                        <div>
+                            <h5 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><Calendar size={18} /> תאריך לידה (אופציונלי)</h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="bg-white p-4 rounded-lg border border-gray-200 relative">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className="text-sm font-bold text-gray-500">תאריך עברי</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setDatePickerTarget('birth'); setShowDatePicker(true); }}
+                                            className="text-xs bg-primary text-white px-2 py-1 rounded hover:bg-orange-600 transition"
+                                        >
+                                            בחר יום 📅
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <input type="text" name="hebrew_birth_day" value={formData.hebrew_birth_day || ''} placeholder="יום" className="p-2 border rounded text-center w-full" onChange={handleChange} />
+                                        <input type="text" name="hebrew_birth_month" value={formData.hebrew_birth_month || ''} placeholder="חודש" className="p-2 border rounded text-center w-full" onChange={handleChange} />
+                                        <input type="text" name="hebrew_birth_year" value={formData.hebrew_birth_year || ''} placeholder="שנה" className="p-2 border rounded text-center w-full" onChange={handleChange} />
+                                    </div>
+                                </div>
+                                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                    <label className="text-sm font-bold text-gray-500 mb-2 block">תאריך לועזי</label>
+                                    <input type="date" name="gregorian_birth_date" value={formData.gregorian_birth_date || ''} className="p-2 border rounded w-full" onChange={handleChange} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 2: Requester Info */}
+                    <div className="space-y-6">
+                        <h4 className="font-bold text-gray-700 text-xl border-r-4 border-primary pr-3 flex items-center gap-2">
+                            <Globe size={24} />
+                            פרטי המבקש/ת וכתובת
+                        </h4>
+
+                        {/* Contact Info */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <InputGroup label="שמך המלא" name="requester_name" required onChange={handleChange} />
+                            <InputGroup label="טלפון נייד" name="requester_phone" type="tel" required onChange={handleChange} />
+                            <InputGroup label="אימייל" name="requester_email" type="email" required onChange={handleChange} />
+                        </div>
+
+                        {/* Address */}
+                        <div className="p-6 bg-gray-50 rounded-xl space-y-4">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="md:col-span-2"><InputGroup label="עיר" name="requester_city" onChange={handleChange} /></div>
+                                <div className="md:col-span-1"><InputGroup label="עיר" name="requester_city" onChange={handleChange} /></div>
                                 <div className="md:col-span-2"><InputGroup label="רחוב" name="requester_street" onChange={handleChange} /></div>
                                 <InputGroup label="מס' בית" name="requester_house_number" onChange={handleChange} />
                                 <InputGroup label="מס' דירה" name="requester_apartment" onChange={handleChange} />
@@ -233,6 +317,13 @@ const RequestKaddish = () => {
                         </p>
                     </div>
                 </form>
+
+                {/* Modals */}
+                <HebrewDatePicker
+                    isOpen={showDatePicker}
+                    onClose={() => setShowDatePicker(false)}
+                    onSelect={handleDateSelect}
+                />
             </div>
         </div>
     );

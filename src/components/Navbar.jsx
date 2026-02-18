@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, ChevronDown } from 'lucide-react';
-import menuData from '../data/menu_structure.json';
+import { useSettings } from '../context/SettingsContext';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const Navbar = ({ pages = [] }) => {
+    const { settings, menu } = useSettings();
+    const { t, language, isRtl } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
-    const [expandedMobile, setExpandedMobile] = useState({}); // Track expanded items by name/key
+    const [expandedMobile, setExpandedMobile] = useState({});
     const location = useLocation();
 
     useEffect(() => {
@@ -17,148 +21,204 @@ const Navbar = ({ pages = [] }) => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Filter menu items based on visibility
-    // Helper function to check if a path is visible
+    // ... (keep existing visibility logic) ...
     const isPathVisible = (path) => {
-        // Check for Home page visibility directly from DB
         if (path === '/') {
             const homePage = pages?.find(p => p.slug === 'home');
             return homePage ? (homePage.isVisible !== false) : true;
         }
-
-        // Other special paths (hardcoded for now as they might not have DB pages)
         if (path === '/request' || path === '/kaddish-library' || path === '/generators') return true;
-
-        // Content pages /page/:slug
         if (path.startsWith('/page/')) {
             const slug = path.split('/page/')[1];
-            // If pages prop is provided, check it. If not found, assume visible or check if pages is empty
             if (!pages || pages.length === 0) return true;
             const page = pages.find(p => p.slug === slug);
-            return page ? (page.isVisible !== false) : true; // Default to true if not found (legacy behavior)
+            return page ? (page.isVisible !== false) : true;
         }
         return true;
     };
 
-    // Recursive function to filter menu structure
     const filterMenu = (items) => {
+        if (!items) return [];
         return items.map(item => {
-            // Check if item itself is visible
-            if (item.path && !isPathVisible(item.path)) return null;
+            // 1. Recurse first to find visible children
+            const filteredChildren = item.items ? filterMenu(item.items) : [];
+            const hasVisibleChildren = filteredChildren.length > 0;
 
-            // Check children
-            if (item.items) {
-                const filteredChildren = filterMenu(item.items).filter(Boolean);
-                if (filteredChildren.length === 0 && !item.path) return null; // Hide category if empty and no path
-                return { ...item, items: filteredChildren };
-            }
+            // 2. Check if this specific page is hidden
+            // Logic:
+            // a. Global Menu Visibility: If item has explicit isVisible: false, it's hidden (regardless of page).
+            // b. CMS Page Visibility: If it's a CMS page, check the page's isVisible status via isPathVisible.
 
-            return item;
+            const isItemVisible = item.isVisible !== false; // Default to true if undefined
+            const isPageVisible = item.path ? isPathVisible(item.path) : true;
+
+            // Combined Visibility: Must be BOTH (if applicable)
+            // Note: isPathVisible returns TRUE if path is not found in pages (system links), 
+            // so we mostly rely on isItemVisible for system links.
+            const isVisible = isItemVisible && isPageVisible;
+
+            // 3. Logic:
+            // - If it has visible children, we MUST show it as a container (even if the page itself is hidden).
+            // - If it has NO children, we respect the isVisible flag.
+            if (!hasVisibleChildren && !isVisible) return null;
+
+            // Return item (with filtered children)
+            // If parent is hidden but has children, we might want to disable the link? 
+            // For now, let's just keep the path but you could map it to '#' if (!isVisible).
+            return { ...item, items: filteredChildren };
         }).filter(Boolean);
     };
 
-    const menuItems = filterMenu(menuData);
+    // Fallback for missing menu data
+    const effectiveMenu = (menu && menu.length > 0) ? menu : (pages ? [] : []);
+
+    const menuItems = filterMenu(effectiveMenu.length > 0 ? effectiveMenu : [
+        // Hardcoded backup if EVERYTHING fails
+        { title: 'דף הבית', path: '/' },
+        { title: 'בקשת קדיש', path: '/request' },
+        { title: 'צור קשר', path: '/page/contact' }
+    ]);
+
+    // Helper to translate menu items
+    // Tries to map known Hebrew names to translation keys
+    const translateItem = (name) => {
+        // Only map items that actually exist in translation files
+        const map = {
+            'דף הבית': 'nav.home',
+            'בקשת קדיש': 'nav.request',
+            'מחוללים': 'nav.generators',
+            'ניהול': 'nav.admin',
+            'אודות': 'nav.about',
+            'צור קשר': 'nav.contact'
+        };
+        // If no translation key exists, show the Hebrew name as-is
+        return map[name] ? t(map[name]) : name;
+    };
+
+    const renderMobileMenuItem = (item, level = 0) => {
+        const hasSubItems = item.items && item.items.length > 0;
+        const isExpanded = expandedMobile[item.name || item.title];
+        const paddingRight = level * 16; // Indent
+
+        return (
+            <div key={item.name || item.title} className="w-full">
+                <div className="flex justify-between items-center py-2" style={{ paddingRight: `${paddingRight}px` }}>
+                    {hasSubItems ? (
+                        <button
+                            onClick={() => setExpandedMobile(prev => ({ ...prev, [item.name || item.title]: !prev[item.name || item.title] }))}
+                            className={`font-medium text-lg flex justify-between items-center w-full ${level === 0 ? 'text-primary' : 'text-gray-700'}`}
+                        >
+                            {translateItem(item.name || item.title)}
+                            <ChevronDown size={18} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        </button>
+                    ) : (
+                        <Link
+                            to={item.path}
+                            onClick={() => setIsOpen(false)}
+                            className={`block w-full text-right ${level === 0 ? 'font-bold text-xl text-primary' : 'text-lg text-gray-700 hover:text-primary'}`}
+                        >
+                            {translateItem(item.name || item.title)}
+                        </Link>
+                    )}
+                </div>
+
+                {/* Recursive Children */}
+                {hasSubItems && (
+                    <div className={`flex flex-col gap-1 border-r-2 border-gray-100 pr-2 transition-all overflow-hidden ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                        {item.items.map(subItem => renderMobileMenuItem(subItem, level + 1))}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
         <nav
             className={`fixed top-0 w-full z-50 transition-all duration-300 font-sans ${scrolled || location.pathname !== '/' ? 'bg-white shadow-md py-2 border-b border-gray-100' : 'bg-transparent py-4'
                 }`}
+            dir={isRtl ? 'rtl' : 'ltr'}
         >
             <div className={`container mx-auto px-6 flex justify-between items-center ${scrolled || location.pathname !== '/' ? 'text-dark' : 'text-white'}`}>
 
                 {/* Logo Area */}
-                {/* Logo Area */}
                 <Link to="/" className="flex items-center gap-2 z-50">
-                    <div className="bg-white/90 p-1.5 rounded-lg shadow-sm backdrop-blur-sm hover:bg-white transition-colors">
+                    <div className={`transition-all duration-300`}>
                         <img
-                            src="/assets/logo.png"
-                            alt="Logo"
-                            className="transition-all duration-300 h-16 w-auto" // Adjusted height slightly to fit container
+                            src={settings?.general.logoUrl || "/assets/logo.png"}
+                            alt={settings?.general.siteTitle || "Logo"}
+                            className={`transition-all duration-300 w-auto object-contain ${scrolled ? 'h-20 md:h-24' : 'h-28 md:h-40'}`}
+                            style={{
+                                filter: `
+                                    drop-shadow(0 0 2px #fff) 
+                                    drop-shadow(0 0 5px #fff) 
+                                    drop-shadow(0 0 15px #fff) 
+                                    drop-shadow(0 0 60px rgba(255,255,255,0.85)) 
+                                    drop-shadow(0 0 120px rgba(255,255,255,0.85))
+                                    drop-shadow(0 0 180px rgba(255,255,255,0.85))`
+                            }}
                         />
                     </div>
                 </Link>
 
-                {/* Desktop Menu - Changed to flex-row (from reverse) to swap order: Info Right, Contact Left */}
-                <div className="hidden lg:flex items-center gap-6 flex-row">
+                {/* Desktop Menu */}
+                {/* We use specific flex-row/row-reverse based on direction handled by CSS 'dir' or explicit classes if needed. 
+                    Tailwind 'flex-row' is direction-agnostic in RTL mode usually, but allow 'gap' to handle spacing.
+                */}
+                <div className="hidden lg:flex items-center gap-6">
 
                     {menuItems.map((category) => (
                         <div key={category.title} className="relative group h-full flex items-center">
                             {category.items && category.items.length > 0 ? (
                                 <>
-                                    <button className={`flex items-center gap-1 font-bold text-lg hover:opacity-80 transition-opacity py-4 ${scrolled || location.pathname !== '/' ? 'text-dark' : 'text-white'}`}>
-                                        {category.title}
+                                    <Link
+                                        to={category.path === '#' ? '#' : category.path}
+                                        className={`flex items-center gap-1 font-bold text-lg hover:opacity-80 transition-opacity py-4 ${scrolled || location.pathname !== '/' ? 'text-dark' : 'text-white'}`}
+                                        onClick={(e) => { if (category.path === '#') e.preventDefault(); }}
+                                    >
+                                        {translateItem(category.title)}
                                         <ChevronDown size={16} />
-                                    </button>
+                                    </Link>
 
-                                    {/* Level 1 Dropdown - Anchor Left (left-0) to grow Right */}
-                                    {/* REMOVED pt-2 to fix gap/floating issue - now totally flush */}
-                                    <div className="absolute top-full left-0 w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[60]">
-                                        <div className="bg-white shadow-xl rounded-lg py-2 border border-gray-100">
+
+                                    {/* Dropdown Menu - Supporting Nested Flyouts */}
+                                    <div className={`absolute top-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[60] ${isRtl ? 'right-0' : 'left-0'}`}>
+                                        <div className="bg-white shadow-xl rounded-lg py-2 border border-gray-100 min-w-[220px]">
                                             {category.items.map((item) => (
-                                                <div key={item.name} className="relative group/sub">
-                                                    {item.items ? (
-                                                        /* Nested Item with Level 2 Dropdown */
+                                                <div key={item.name} className="relative group/submenu">
+                                                    {item.items && item.items.length > 0 ? (
                                                         <>
-                                                            <button className="w-full flex items-center justify-between px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors text-right font-medium">
-                                                                <span className="flex items-center gap-1">
-                                                                    {/* Rotate -90 to point Right */}
-                                                                    <ChevronDown size={14} className="-rotate-90" />
-                                                                    {item.name}
-                                                                </span>
-                                                            </button>
+                                                            {/* Item with Sub-menu */}
+                                                            <div className="flex items-center justify-between px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors font-medium cursor-pointer">
+                                                                <div className="flex items-center justify-between w-full">
+                                                                    <span>{translateItem(item.name)}</span>
+                                                                    <div className={`${isRtl ? 'mr-2 rotate-90' : 'ml-2 -rotate-90'}`}>
+                                                                        <ChevronDown size={14} />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
 
-                                                            {/* Level 2 Dropdown - Opens to Right (left-full) */}
-                                                            {/* Removed pl-1 to fix floating gap */}
-                                                            <div className="absolute top-0 left-full w-60 opacity-0 invisible group-hover/sub:opacity-100 group-hover/sub:visible transition-all duration-200 z-[70]">
-                                                                <div className="bg-white shadow-xl rounded-lg py-2 border border-gray-100">
+                                                            {/* Nested Flyout Menu */}
+                                                            <div className={`absolute top-0 opacity-0 invisible group-hover/submenu:opacity-100 group-hover/submenu:visible transition-all duration-200 z-[70] ${isRtl ? 'right-full mr-0.5' : 'left-full ml-0.5'}`}>
+                                                                <div className="bg-white shadow-xl rounded-lg py-2 border border-gray-100 min-w-[200px]">
                                                                     {item.items.map((subItem) => (
-                                                                        <div key={subItem.name} className="relative group/deep">
-                                                                            {subItem.items ? (
-                                                                                /* Level 3 Item (Nusach) */
-                                                                                <>
-                                                                                    <button className="w-full flex items-center justify-between px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors text-right text-sm font-medium">
-                                                                                        <span className="flex items-center gap-1">
-                                                                                            <ChevronDown size={12} className="-rotate-90" />
-                                                                                            {subItem.name}
-                                                                                        </span>
-                                                                                    </button>
-
-                                                                                    {/* Level 3 Dropdown - Opens to Right (left-full) */}
-                                                                                    <div className="absolute top-0 left-full w-64 opacity-0 invisible group-hover/deep:opacity-100 group-hover/deep:visible transition-all duration-200 z-[80]">
-                                                                                        <div className="bg-white shadow-xl rounded-lg py-2 border border-gray-100">
-                                                                                            {subItem.items.map((deepItem) => (
-                                                                                                <Link
-                                                                                                    key={deepItem.name}
-                                                                                                    to={deepItem.path}
-                                                                                                    className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors text-right text-sm"
-                                                                                                >
-                                                                                                    {deepItem.name}
-                                                                                                </Link>
-                                                                                            ))}
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </>
-                                                                            ) : (
-                                                                                /* Standard Level 2 Link */
-                                                                                <Link
-                                                                                    to={subItem.path}
-                                                                                    className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors text-right text-sm"
-                                                                                >
-                                                                                    {subItem.name}
-                                                                                </Link>
-                                                                            )}
-                                                                        </div>
+                                                                        <Link
+                                                                            key={subItem.name}
+                                                                            to={subItem.path}
+                                                                            className="block px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors text-sm"
+                                                                        >
+                                                                            {subItem.name}
+                                                                        </Link>
                                                                     ))}
                                                                 </div>
                                                             </div>
                                                         </>
                                                     ) : (
-                                                        /* Standard Link */
+                                                        /* Standalone Link */
                                                         <Link
                                                             to={item.path}
-                                                            className="block px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors text-right font-medium"
+                                                            className="block px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors font-medium"
                                                         >
-                                                            {item.name}
+                                                            {translateItem(item.name)}
                                                         </Link>
                                                     )}
                                                 </div>
@@ -168,137 +228,56 @@ const Navbar = ({ pages = [] }) => {
                                 </>
                             ) : (
                                 <Link to={category.path} className={`font-bold text-lg hover:opacity-80 transition-opacity py-4 ${scrolled || location.pathname !== '/' ? 'text-dark' : 'text-white'}`}>
-                                    {category.title}
+                                    {translateItem(category.title)}
                                 </Link>
                             )}
                         </div>
                     ))}
 
-                    {/* CTA Button - Moved to End for correct RTL Order (Leftmost) */}
-                    <Link
-                        to="/request"
-                        className={`px-6 py-2.5 rounded-lg font-bold transition-all duration-300 ${scrolled || location.pathname !== '/'
-                            ? 'bg-primary text-dark hover:bg-yellow-400 shadow-sm'
-                            : 'bg-white text-dark hover:bg-gray-100'
-                            }`}
-                    >
-                        שליחת בקשה לקדיש
-                    </Link>
+                    {/* CTA Button & Language */}
+                    <div className="flex items-center gap-4">
+                        <LanguageSwitcher />
+                        <Link
+                            to="/request"
+                            className={`px-6 py-2.5 rounded-lg font-bold transition-all duration-300 ${scrolled || location.pathname !== '/'
+                                ? 'bg-primary text-dark hover:bg-yellow-400 shadow-sm'
+                                : 'bg-white text-dark hover:bg-gray-100'
+                                }`}
+                        >
+                            {t('nav.request')}
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Mobile Menu Button */}
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     className={`lg:hidden p-2 z-50 ${isOpen ? 'text-dark' : 'text-current'}`}
+                    aria-label={isOpen ? t('accessibility.toggle') : t('accessibility.toggle')}
+                    aria-expanded={isOpen}
                 >
                     {isOpen ? <X size={28} /> : <Menu size={28} />}
                 </button>
 
                 {/* Mobile Overlay */}
-                <div className={`fixed inset-0 bg-white z-40 transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-                    <div className="h-full overflow-y-auto pt-24 px-6 text-dark text-center pb-10">
-                        <div className="flex flex-col gap-6">
-                            {menuItems.map((category) => {
-                                const isExpanded = expandedMobile[category.title];
-                                const hasSubItems = category.items && category.items.length > 0;
+                <div className={`fixed inset-0 bg-white z-40 transition-transform duration-300 ${isOpen ? (isRtl ? 'translate-x-0' : 'translate-x-0') : (isRtl ? 'translate-x-full' : '-translate-x-full')}`}>
+                    <div className="h-full overflow-y-auto pt-24 px-6 text-dark text-center pb-10" dir={isRtl ? 'rtl' : 'ltr'}>
+                        <div className="flex flex-col gap-4">
+                            {menuItems.map((item) => renderMobileMenuItem(item, 0))}
 
-                                return (
-                                    <div key={category.title} className="text-right border-b border-gray-50 pb-4">
-                                        <div className="flex justify-between items-center mb-2">
-                                            {hasSubItems ? (
-                                                <button
-                                                    onClick={() => setExpandedMobile(prev => ({ ...prev, [category.title]: !prev[category.title] }))}
-                                                    className="font-bold text-xl text-primary flex justify-between items-center w-full"
-                                                >
-                                                    {category.title}
-                                                    <ChevronDown size={20} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                                                </button>
-                                            ) : (
-                                                <Link
-                                                    to={category.path}
-                                                    onClick={() => setIsOpen(false)}
-                                                    className="font-bold text-xl text-primary block w-full"
-                                                >
-                                                    {category.title}
-                                                </Link>
-                                            )}
-                                        </div>
+                            <div className="mt-4 border-t border-gray-100 pt-4">
+                                <Link
+                                    to="/request"
+                                    onClick={() => setIsOpen(false)}
+                                    className="block w-full bg-primary text-dark font-bold py-4 rounded-xl shadow-lg hover:bg-yellow-400 text-center"
+                                >
+                                    {t('nav.request')}
+                                </Link>
+                            </div>
+                        </div>
 
-                                        {/* Level 1 Sub Menu */}
-                                        <div className={`flex flex-col gap-3 mr-2 border-r-2 border-gray-100 pr-4 transition-all overflow-hidden ${isExpanded ? 'active' : 'hidden'}`}>
-                                            {category.items && category.items.map(item => {
-                                                const subKey = `${category.title}-${item.name}`;
-                                                const isSubExpanded = expandedMobile[subKey];
-                                                const hasDeepItems = item.items && item.items.length > 0;
-
-                                                return (
-                                                    <div key={item.name}>
-                                                        {hasDeepItems ? (
-                                                            <div className="mb-2">
-                                                                <button
-                                                                    onClick={() => setExpandedMobile(prev => ({ ...prev, [subKey]: !prev[subKey] }))}
-                                                                    className="font-bold text-lg text-gray-800 flex justify-between items-center w-full"
-                                                                >
-                                                                    {item.name}
-                                                                    <ChevronDown size={16} className={`text-gray-400 transition-transform ${isSubExpanded ? 'rotate-180' : ''}`} />
-                                                                </button>
-
-                                                                {/* Level 2 Sub Menu */}
-                                                                <div className={`mt-2 flex flex-col gap-2 mr-2 pr-2 ${isSubExpanded ? 'active' : 'hidden'}`}>
-                                                                    {item.items.map(sub => (
-                                                                        sub.items ? (
-                                                                            <div key={sub.name}>
-                                                                                <div className="font-bold text-sm text-gray-500 mb-1">{sub.name}</div>
-                                                                                <div className="mr-2 border-r border-gray-200 pr-2 flex flex-col gap-2">
-                                                                                    {sub.items.map(deep => (
-                                                                                        <Link
-                                                                                            key={deep.name}
-                                                                                            to={deep.path}
-                                                                                            onClick={() => setIsOpen(false)}
-                                                                                            className="block text-sm text-gray-600 active:text-primary py-1"
-                                                                                        >
-                                                                                            {deep.name}
-                                                                                        </Link>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <Link
-                                                                                key={sub.name}
-                                                                                to={sub.path}
-                                                                                onClick={() => setIsOpen(false)}
-                                                                                className="block text-gray-600 py-1 hover:text-primary"
-                                                                            >
-                                                                                {sub.name}
-                                                                            </Link>
-                                                                        )
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <Link
-                                                                to={item.path}
-                                                                onClick={() => setIsOpen(false)}
-                                                                className="block text-lg text-gray-700 hover:text-primary"
-                                                            >
-                                                                {item.name}
-                                                            </Link>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-
-                            <Link
-                                to="/request"
-                                onClick={() => setIsOpen(false)}
-                                className="mt-4 w-full bg-primary text-dark font-bold py-4 rounded-xl shadow-lg hover:bg-yellow-400 text-center"
-                            >
-                                שליחת בקשה לקדיש
-                            </Link>
+                        <div className="mt-6 flex justify-center">
+                            <LanguageSwitcher />
                         </div>
                     </div>
                 </div>

@@ -3,6 +3,7 @@ import { HDate, gematriya } from '@hebcal/core';
 import { ChevronRight, ChevronLeft, Calendar as CalendarIcon, Search, ChevronDown, X } from 'lucide-react';
 import { formatHebrewDate, formatHebrewDateSmart, normalizeHebrewDate } from '../utils/dateUtils';
 import DeceasedPopup from './DeceasedPopup';
+import HebrewDatePicker from './HebrewDatePicker';
 
 const HebrewCalendarWidget = ({ kaddishList = [] }) => {
     const [currentHDate, setCurrentHDate] = useState(new HDate());
@@ -137,11 +138,11 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
         const isLeap = HDate.isLeapYear(y);
         const hebrewMonths = {
             1: 'ניסן', 2: 'אייר', 3: 'סיון', 4: 'תמוז', 5: 'אב', 6: 'אלול',
-            7: 'תשרי', 8: 'חשון', 9: 'כסלו', 10: 'טבת', 11: 'שבט', 12: 'אדר', 13: 'אדר ב'
+            7: 'תשרי', 8: 'חשון', 9: 'כסלו', 10: 'טבת', 11: 'שבט', 12: 'אדר', 13: 'אדר ב\''
         };
         let name = hebrewMonths[m];
         if (!isLeap && m === 12) name = 'אדר';
-        if (isLeap && m === 12) name = 'אדר א';
+        if (isLeap && m === 12) name = 'אדר א\'';
         return name;
     }, [currentHDate]);
 
@@ -160,55 +161,27 @@ const HebrewCalendarWidget = ({ kaddishList = [] }) => {
                     </button>
 
                     <div className="relative">
-                        {!showJumpUI ? (
-                            <button
-                                onClick={() => {
-                                    setJumpYear(currentYear);
-                                    setJumpMonth(currentHDate.getMonth());
-                                    setJumpDay(selectedDate.getDate());
-                                    setShowJumpUI(true);
-                                }}
-                                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-primary hover:text-primary transition-all text-gray-800 font-bold"
-                            >
-                                <CalendarIcon className="w-5 h-5 text-gray-500" />
-                                <span>{displayMonthName} {gematriya(currentYear)}</span>
-                                <ChevronDown className="w-4 h-4 text-gray-400" />
-                            </button>
-                        ) : (
-                            <div className="flex flex-col gap-3 animate-fade-in absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 bg-white shadow-xl p-4 rounded-xl z-20 border border-orange-100 w-[300px]">
-                                <h4 className="text-gray-700 font-bold text-center border-b pb-2">קפיצה לתאריך</h4>
-                                <div className="flex gap-2">
-                                    <select
-                                        value={jumpDay}
-                                        onChange={(e) => setJumpDay(e.target.value)}
-                                        className="p-2 rounded border border-gray-300 text-sm font-bold w-16"
-                                    >
-                                        {dayOptions.map(d => <option key={d} value={d}>{gematriya(d)}</option>)}
-                                    </select>
-                                    <select
-                                        value={jumpMonth}
-                                        onChange={(e) => setJumpMonth(e.target.value)}
-                                        className="p-2 rounded border border-gray-300 text-sm font-bold flex-1"
-                                    >
-                                        {monthOptions.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                                    </select>
-                                    <input
-                                        type="number"
-                                        value={jumpYear}
-                                        onChange={(e) => setJumpYear(e.target.value)}
-                                        className="w-20 p-2 rounded border border-gray-300 text-sm font-bold text-center"
-                                    />
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={handleJumpApply} className="flex-1 bg-primary text-white p-2 rounded hover:bg-orange-600 font-bold">
-                                        עבור
-                                    </button>
-                                    <button onClick={() => setShowJumpUI(false)} className="bg-gray-100 text-gray-600 p-2 rounded hover:bg-gray-200">
-                                        ביטול
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                        <button
+                            onClick={() => setShowJumpUI(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-primary hover:text-primary transition-all text-gray-800 font-bold"
+                        >
+                            <CalendarIcon className="w-5 h-5 text-gray-500" />
+                            <span>
+                                {displayMonthName} {gematriya(currentYear)}
+                            </span>
+                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                        </button>
+
+                        {/* New Date Picker Modal */}
+                        <HebrewDatePicker
+                            isOpen={showJumpUI}
+                            onClose={() => setShowJumpUI(false)}
+                            onSelect={(date) => {
+                                setCurrentHDate(date);
+                                setSelectedDate(date);
+                            }}
+                            initialDate={currentHDate}
+                        />
                     </div>
 
                     <button onClick={() => handleMonthChange(1)} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition-all">

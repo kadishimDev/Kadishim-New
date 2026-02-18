@@ -1,20 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Lock } from 'lucide-react';
+import { Lock, LayoutDashboard, FileText, Users, Settings, Flame } from 'lucide-react';
 
 // Layout & Components
-import AdminLayout from '../layouts/AdminLayout';
+// Layout & Components
+import AdminLayout from '../layouts/AdminLayoutFix'; // Setup Fix
 import DashboardHome from '../components/admin/DashboardHome';
-import TechnicianDashboard from '../components/admin/TechnicianDashboard';
+import MissionControl from '../components/admin/MissionControl';
 import MemorialsManager from '../components/admin/MemorialsManager';
 import PageEditor from '../components/admin/PageEditor';
+import DistributionPanel from '../components/admin/DistributionPanel';
+import SettingsManager from '../components/admin/SettingsManager';
 import HebrewCalendarWidget from '../components/HebrewCalendarWidget';
+import AdminRequests from '../components/admin/AdminRequests';
+import AdminInbox from '../components/admin/AdminInbox';
+import AdminYizkor from '../components/admin/AdminYizkor'; // Added
 
-// Data
-import memorialsData from '../data/memorials_v2.json'; // Parsed & Formatted
-import pagesData from '../data/pages_db.json';
-import SystemHealthDNA from '../components/SystemHealthDNA';
+// Data (Imports removed as we use DataContext/SettingsContext)
 
-const Admin = ({ pages, setPages }) => {
+
+import { useData } from '../context/DataContext';
+
+const Admin = () => {
     // Auth State
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [password, setPassword] = useState('');
@@ -22,17 +28,24 @@ const Admin = ({ pages, setPages }) => {
 
     // Navigation (Managed by Layout)
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [navParams, setNavParams] = useState(null);
 
-    // Data State
-    const [memorials, setMemorials] = useState(memorialsData);
-    // Removed local pages state to use prop
+    // Data from Context
+    const {
+        memorials,
+        pages,
+        loading: dataLoading,
+        savePage,
+        updateMemorial
+    } = useData();
 
+    // Derived loading state
+    const isLoading = dataLoading.pages || dataLoading.memorials;
 
     const handleLogin = (e) => {
         e.preventDefault();
         if (password === 'admin123') {
             setIsAuthenticated(true);
-            // Optional: Save to localStorage
         } else {
             setAuthError(true);
         }
@@ -43,97 +56,102 @@ const Admin = ({ pages, setPages }) => {
         setPassword('');
     };
 
-    const handlePageUpdate = (updatedPage) => {
-        // Optimistic Update: Create if not exists, Update if exists
-        setPages(prev => {
-            const exists = prev.some(p => p.slug === updatedPage.slug);
-            if (exists) {
-                return prev.map(p => p.slug === updatedPage.slug ? updatedPage : p);
-            } else {
-                return [...prev, updatedPage];
-            }
-        });
-    };
-
-    if (!isAuthenticated) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4" dir="rtl">
-                <SystemHealthDNA />
-                <form onSubmit={handleLogin} className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200 animate-fade-in-up">
-                    <div className="text-center mb-8">
-                        <div className="bg-black inline-block p-4 rounded-full mb-4 shadow-lg">
-                            <Lock className="w-8 h-8 text-primary" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-gray-800">ממשק ניהול מרכזי</h2>
-                        <p className="text-gray-500 mt-2">גישה לצוות האתר בלבד</p>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div>
-                            <label htmlFor="password-input" className="block text-sm font-bold text-gray-700 mb-1">סיסמת מערכת</label>
-                            <input
-                                id="password-input"
-                                type="password"
-                                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-primary outline-none transition-all"
-                                value={password}
-                                onChange={(e) => { setPassword(e.target.value); setAuthError(false); }}
-                                autoFocus
-                            />
-                        </div>
-
-                        {authError && (
-                            <div className="text-red-500 text-sm bg-red-50 p-2 rounded flex items-center gap-2 font-bold">
-                                ⚠ סיסמה שגויה
-                            </div>
-                        )}
-
-                        <button className="w-full bg-black text-white font-bold py-3 rounded-lg hover:bg-gray-800 transition-colors shadow-lg">
-                            כניסה למערכת
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => window.location.hash = '/'}
-                            className="w-full text-gray-400 hover:text-gray-600 font-medium transition-colors text-sm pt-2"
-                        >
-                            ← חזרה לאתר
-                        </button>
-                    </div>
-                </form>
-            </div>
-        );
-    }
-
-    const handleUpdateMemorial = (updatedItem) => {
-        setMemorials(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+    const handleNavigate = (tab, params = null) => {
+        setNavParams(params);
+        setActiveTab(tab);
     };
 
     // Main Router Switch
     const renderContent = () => {
+        if (isLoading) {
+            return (
+                <div className="flex items-center justify-center h-full">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                </div>
+            );
+        }
+
         switch (activeTab) {
             case 'dashboard':
-                // Technician Dashboard is now the default "Home" view
-                return <TechnicianDashboard memorials={memorials} pages={pages} onNavigate={setActiveTab} />;
+                return <MissionControl onNavigate={handleNavigate} />;
             case 'memorials':
-                return <MemorialsManager memorials={memorials} onUpdate={handleUpdateMemorial} />;
+                return <MemorialsManager memorials={memorials} onUpdate={updateMemorial} initialParams={navParams} />;
+            case 'yizkor': // New Tab Case
+                return <AdminYizkor />;
             case 'calendar':
-                // Full screen calendar widget
                 return (
                     <div className="animate-fade-in">
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 items-start">
                             <h2 className="text-2xl font-bold text-gray-800 mb-6">לוח שנה עברי - צפייה באזכרות</h2>
-                            <HebrewCalendarWidget kaddishList={memorials} onUpdate={handleUpdateMemorial} />
+                            <HebrewCalendarWidget kaddishList={memorials} onUpdate={updateMemorial} />
                         </div>
                     </div>
                 );
             case 'pages':
-                return <PageEditor pages={pages} onUpdate={handlePageUpdate} />;
+                return <PageEditor pages={pages} onUpdate={savePage} />;
+            case 'requests':
+                return <AdminRequests />;
+            case 'inbox':
+                return <AdminInbox />;
+            case 'distribution':
+                return <DistributionPanel />;
             case 'settings':
-                return <div className="text-center text-gray-400 mt-20">מודול הגדרות בבנייה...</div>;
+                return <SettingsManager />;
             default:
-                return <TechnicianDashboard memorials={memorials} pages={pages} />;
+                return <MissionControl />;
         }
     };
+
+    if (!isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4" dir="rtl">
+                <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+                    <div className="text-center mb-8">
+                        <div className="flex justify-center mb-4">
+                            <div className="bg-primary/10 p-4 rounded-full">
+                                <Lock size={32} className="text-primary" />
+                            </div>
+                        </div>
+                        <h1 className="text-2xl font-bold text-gray-800">כניסה למערכת ניהול</h1>
+                        <p className="text-gray-500 mt-2">אנא הזינו סיסמה להמשך</p>
+                    </div>
+
+                    <form onSubmit={handleLogin} className="space-y-6">
+                        <div>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => { setPassword(e.target.value); setAuthError(false); }}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-center text-lg tracking-widest"
+                                placeholder="סיסמה"
+                                autoFocus
+                            />
+                            {authError && (
+                                <p className="text-red-500 text-sm mt-2 text-center font-medium animate-pulse">
+                                    סיסמה שגויה, נסו שוב
+                                </p>
+                            )}
+                        </div>
+                        <button
+                            type="submit"
+                            className="w-full bg-primary hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary/30 transition-all transform hover:scale-[1.02] active:scale-95"
+                        >
+                            כניסה
+                        </button>
+                    </form>
+
+                    <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+                        <a
+                            href="/"
+                            className="text-gray-400 hover:text-primary transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                        >
+                            חזרה לדף הבית
+                        </a>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <AdminLayout
@@ -142,7 +160,6 @@ const Admin = ({ pages, setPages }) => {
             onLogout={handleLogout}
         >
             {renderContent()}
-            <SystemHealthDNA />
         </AdminLayout>
     );
 };

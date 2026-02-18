@@ -1,16 +1,17 @@
 import React from 'react';
 import { Phone, Mail, MessageCircle } from 'lucide-react';
 
+import { useSettings } from '../context/SettingsContext';
+
 const ContactActions = () => {
-    const phoneNumber = "0501234567"; // Replace with real number
-    const emailAddress = "office@kadishim.co.il"; // Replace with real email
-    const whatsappNumber = "972501234567"; // Replace with real WA
+    const { settings } = useSettings();
+    const { phone, email, whatsapp } = settings.contact;
 
     return (
         <div style={{ position: 'fixed', bottom: '24px', left: '24px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {/* WhatsApp */}
             <a
-                href={`https://wa.me/${whatsappNumber}`}
+                href={`https://wa.me/${whatsapp}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-12 h-12 bg-[#25D366] text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform hover:shadow-xl"
@@ -21,7 +22,7 @@ const ContactActions = () => {
 
             {/* Phone */}
             <a
-                href={`tel:${phoneNumber}`}
+                href={`tel:${phone}`}
                 className="w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform hover:shadow-xl"
                 title="התקשר עכשיו"
             >
@@ -30,7 +31,7 @@ const ContactActions = () => {
 
             {/* Email */}
             <a
-                href={`mailto:${emailAddress}`}
+                href={`mailto:${email}`}
                 className="w-12 h-12 bg-gray-700 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform hover:shadow-xl"
                 title="שלח אימייל"
             >

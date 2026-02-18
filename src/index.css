@@ -2,6 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .animate-flicker {
+    animation: flicker 3s infinite alternate;
+  }
+
+  .animate-flicker-fast {
+    animation: flicker 1s infinite alternate-reverse;
+  }
+
+  .animate-sway {
+    animation: sway 3s infinite ease-in-out alternate;
+  }
+
+  .animate-slow-pan {
+    animation: slowPan 20s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes slowPan {
+  0% {
+    transform: scale(1.1) translateY(0);
+  }
+
+  100% {
+    transform: scale(1.2) translateY(-2%);
+  }
+}
+
+/* Realistic Candle Animation */
+@keyframes flicker {
+
+  0%,
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.9;
+    filter: blur(1px);
+  }
+
+  25% {
+    transform: translateX(-51%) scale(1.1, 0.9) skewX(2deg);
+    opacity: 0.8;
+    filter: blur(2px);
+  }
+
+  50% {
+    transform: translateX(-49%) scale(0.9, 1.1) skewX(-2deg);
+    opacity: 1;
+    filter: blur(1px);
+  }
+
+  75% {
+    transform: translateX(-52%) scale(1.05, 0.95) skewX(1deg);
+    opacity: 0.85;
+    filter: blur(1.5px);
+  }
+}
+
+@keyframes sway {
+  0% {
+    transform: rotate(-2deg);
+  }
+
+  100% {
+    transform: rotate(2deg);
+  }
+}
+
 @layer base {
   html {
     font-family: 'Assistant', sans-serif;
@@ -13,6 +80,17 @@
     background-color: #ffffff;
     color: #1a1a1a;
   }
+
+  p {
+    text-align: justify;
+    text-justify: inter-word;
+  }
+}
+
+.text-justify-center {
+  text-align: justify;
+  text-align-last: center;
+  text-justify: inter-word;
 }
 
 /* Custom Utilities */
@@ -27,65 +105,6 @@
   background: linear-gradient(to right, #F59E0B, #B45309);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-}
-
-/* Candle Flicker Animation */
-@keyframes flicker {
-  0% {
-    opacity: 0.4;
-  }
-
-  5% {
-    opacity: 0.5;
-  }
-
-  10% {
-    opacity: 0.4;
-  }
-
-  15% {
-    opacity: 0.6;
-  }
-
-  25% {
-    opacity: 0.4;
-  }
-
-  30% {
-    opacity: 0.5;
-  }
-
-  35% {
-    opacity: 0.3;
-  }
-
-  40% {
-    opacity: 0.6;
-  }
-
-  45% {
-    opacity: 0.4;
-  }
-
-  60% {
-    opacity: 0.7;
-  }
-
-  70% {
-    opacity: 0.4;
-  }
-
-  80% {
-    opacity: 0.6;
-  }
-
-  90% {
-    opacity: 0.4;
-  }
-
-  100% {
-    opacity: 0.5;
-  }
 }
 
 .animate-candle-flicker {
@@ -127,4 +146,76 @@
 
 .animate-fade-in-up {
   animation: fadeInUp 0.4s ease-out forwards;
+}
+
+/* Quill Font Families */
+.ql-font-assistant {
+  font-family: 'Assistant', sans-serif;
+}
+
+.ql-font-rubik {
+  font-family: 'Rubik', sans-serif;
+}
+
+.ql-font-frank-ruhl {
+  font-family: 'Frank Ruhl Libre', serif;
+}
+
+.ql-font-secular {
+  font-family: 'Secular One', sans-serif;
+}
+
+.ql-font-arial {
+  font-family: 'Arial', sans-serif;
+}
+
+/* Dropdown styling to show actual font */
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="assistant"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="assistant"]::before {
+  content: "Assistant";
+  font-family: 'Assistant', sans-serif;
+}
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="rubik"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="rubik"]::before {
+  content: "Rubik";
+  font-family: 'Rubik', sans-serif;
+}
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="frank-ruhl"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="frank-ruhl"]::before {
+  content: "Frank Ruhl";
+  font-family: 'Frank Ruhl Libre', serif;
+}
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="secular"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="secular"]::before {
+  content: "Secular";
+  font-family: 'Secular One', sans-serif;
+}
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="arial"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="arial"]::before {
+  content: "Arial";
+  font-family: 'Arial', sans-serif;
+}
+
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="sans-serif"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="sans-serif"]::before {
+  content: "ברירת מחדל";
+}
+
+/* Quill Styling Overrides for RTL */
+.ql-editor {
+  text-align: right;
+  direction: rtl;
+  font-family: 'Assistant', sans-serif;
+  /* Default */
+  font-size: 16px;
+  min-height: 200px;
+}
+
+.ql-toolbar.ql-snow .ql-formats {
+  margin-right: 0;
+  margin-left: 15px;
 }

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { kaddishData } from '../data/kaddishData';
-import { BookOpen, ChevronLeft, ArrowRight } from 'lucide-react';
+import { BookOpen, ChevronLeft, ArrowRight, Download, Image as ImageIcon, Printer } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 // Helper component for formatted text
 const FormattedKaddishText = ({ text }) => {
@@ -48,6 +50,8 @@ const KaddishLibrary = () => {
 
     const [selectedNusach, setSelectedNusachState] = useState(initialNusach);
     const [selectedType, setSelectedTypeState] = useState(initialType);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const contentRef = useRef(null);
 
     const setSelectedNusach = (val) => {
         setSelectedNusachState(val);
@@ -57,6 +61,67 @@ const KaddishLibrary = () => {
     const setSelectedType = (val) => {
         setSelectedTypeState(val);
         setSearchParams({ nusach: selectedNusach, type: val });
+    };
+
+    const handleDownloadImage = async () => {
+        if (!contentRef.current) return;
+        setIsGenerating(true);
+        try {
+            const canvas = await html2canvas(contentRef.current, {
+                useCORS: true,
+                scale: 2, // Retain high quality
+                backgroundColor: '#ffffff'
+            });
+
+            const link = document.createElement('a');
+            link.download = `kaddish-${selectedNusach}-${selectedType}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (error) {
+            console.error("Image generation failed", error);
+            alert("שגיאה ביצירת התמונה");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleDownloadPDF = async () => {
+        if (!contentRef.current) return;
+        setIsGenerating(true);
+        try {
+            const canvas = await html2canvas(contentRef.current, {
+                useCORS: true,
+                scale: 2,
+                backgroundColor: '#ffffff'
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'px',
+                format: [canvas.width, canvas.height]
+            });
+
+            // Adjust PDF dimensions to match canvas (or scale canvas to fit A4... but matching canvas is safer for design)
+            // Actually usually we want A4. Let's start with auto-size to fit content perfect.
+            // If we want A4:
+            // const pdf = new jsPDF('p', 'mm', 'a4');
+            // const pdfWidth = pdf.internal.pageSize.getWidth();
+            // const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            // pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+            pdf.save(`kaddish-${selectedNusach}-${selectedType}.pdf`);
+        } catch (error) {
+            console.error("PDF generation failed", error);
+            alert("שגיאה ביצירת PDF");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handlePrint = () => {
+        window.print();
     };
 
     const nusachOptions = Object.entries(kaddishData).map(([key, data]) => ({
@@ -71,15 +136,17 @@ const KaddishLibrary = () => {
         { id: 'titkabal', label: 'קדיש תתקבל' }
     ];
 
-    const currentData = kaddishData[selectedNusach][selectedType];
+    const currentNusachData = kaddishData[selectedNusach] || kaddishData['sephardi'];
+    const currentTypeOption = typeOptions.find(t => t.id === selectedType) || typeOptions[0];
+    const currentData = currentNusachData[selectedType] || currentNusachData['yatom'];
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
             <Navbar />
 
-            <div className="container mx-auto px-4 py-8 flex-grow mt-24">
-                {/* Header */}
-                <div className="text-center mb-12">
+            <div className="container mx-auto px-4 py-8 flex-grow mt-24 print:mt-0 print:p-0">
+                {/* Header (Hidden on Print) */}
+                <div className="text-center mb-12 print:hidden">
                     <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">ספריית הקדיש</h1>
                     <p className="text-xl text-gray-600 max-w-2xl mx-auto">
                         נוסחי הקדיש המלאים לכל העדות, מחולקים לפי סוגים ומותאמים לקריאה נוחה.
@@ -88,8 +155,8 @@ const KaddishLibrary = () => {
 
                 <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
 
-                    {/* Sidebar Controls */}
-                    <div className="md:col-span-1 space-y-8">
+                    {/* Sidebar Controls (Hidden on Print) */}
+                    <div className="md:col-span-1 space-y-8 print:hidden">
                         {/* Nusach Selector */}
                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                             <h3 className="font-bold text-lg mb-4 text-gray-800 border-b border-gray-100 pb-2">נוסח תפילה</h3>
@@ -133,16 +200,41 @@ const KaddishLibrary = () => {
 
                     {/* Content Display */}
                     <div className="md:col-span-3">
-                        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden min-h-[600px] relative">
-                            {/* Decorative Top Border */}
-                            <div className="h-2 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600"></div>
+                        {/* Toolbar (Hidden on Print) */}
+                        <div className="flex justify-end gap-2 mb-4 print:hidden">
+                            <button
+                                onClick={handlePrint}
+                                disabled={isGenerating}
+                                className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 font-medium transition disabled:opacity-50"
+                            >
+                                <Printer size={18} /> הדפס
+                            </button>
+                            <button
+                                onClick={handleDownloadImage}
+                                disabled={isGenerating}
+                                className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 font-medium transition disabled:opacity-50"
+                            >
+                                <ImageIcon size={18} /> תמונה
+                            </button>
+                            <button
+                                onClick={handleDownloadPDF}
+                                disabled={isGenerating}
+                                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg shadow-md hover:bg-gray-800 font-medium transition disabled:opacity-50"
+                            >
+                                <Download size={18} /> הורד PDF
+                            </button>
+                        </div>
 
-                            <div className="p-8 md:p-12">
+                        <div ref={contentRef} className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden min-h-[600px] relative print:shadow-none print:border-none">
+                            {/* Decorative Top Border */}
+                            <div className="h-2 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 print:hidden"></div>
+
+                            <div className="p-8 md:p-12 print:p-0">
                                 <div className="flex items-center gap-3 text-gray-400 text-sm mb-6 font-medium">
                                     <BookOpen size={16} />
-                                    <span>{kaddishData[selectedNusach].label}</span>
+                                    <span>{currentNusachData.label}</span>
                                     <span>/</span>
-                                    <span>{typeOptions.find(t => t.id === selectedType).label}</span>
+                                    <span>{currentTypeOption.label}</span>
                                 </div>
 
                                 <h2 className="text-3xl font-bold text-gray-900 mb-8 border-b border-gray-100 pb-6">
@@ -160,10 +252,13 @@ const KaddishLibrary = () => {
                                 </div>
                             </div>
 
-                            {/* Quote / Footer of Card */}
-                            <div className="bg-gray-50 p-6 text-center border-t border-gray-100 relative">
+                            {/* Footer of Card */}
+                            <div className="bg-gray-50 p-6 text-center border-t border-gray-100 relative print:bg-white print:border-t-0">
                                 <p className="text-gray-500 text-sm italic">
                                     "יְהֵא שְׁמֵיהּ רַבָּא מְבָרַךְ לְעָלַם וּלְעָלְמֵי עָלְמַיָּא"
+                                </p>
+                                <p className="text-gray-400 text-xs mt-2 print:block hidden">
+                                    הודפס מאתר 'פרויקט קדישים' - kadishim.net
                                 </p>
                             </div>
                         </div>

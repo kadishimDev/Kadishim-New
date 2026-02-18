@@ -1,97 +1,63 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import {
     Activity, Shield, ListTodo, AlertTriangle, CheckCircle,
-    Server, Users, FileText, Database, Clock
+    Server, Users, FileText, Database, Clock, RefreshCw
 } from 'lucide-react';
 
-import { Analytics } from '../../services/analytics';
+import { Analytics } from '../../services/analytics'; // Keep for client-side stats
 
 const TechnicianDashboard = ({ memorials, pages, onNavigate }) => {
-    const [stats, setStats] = useState({
-        totalMemorials: 0,
-        totalPages: 0,
-        systemHealth: 100,
-        pendingTasks: 2,
-        vulnerabilities: 0
-    });
+    const [diagnostics, setDiagnostics] = useState(null);
+    const [loadingInfo, setLoadingInfo] = useState(false);
     const [topPages, setTopPages] = useState([]);
 
+    const fetchDiagnostics = async () => {
+        setLoadingInfo(true);
+        try {
+            const res = await fetch('/api/diagnostics.php');
+            const data = await res.json();
+            setDiagnostics(data);
+        } catch (err) {
+            console.error("Diagnostics failed", err);
+        } finally {
+            setLoadingInfo(false);
+        }
+    };
+
     useEffect(() => {
-        setStats({
-            totalMemorials: memorials.length,
-            totalPages: pages.length,
-            systemHealth: 98,
-            pendingTasks: 1,
-            vulnerabilities: 0
+        fetchDiagnostics();
+        setTopPages(Analytics.getTopPages(5));
+    }, []);
+
+    // Calculate Health Score
+    const calculateHealth = () => {
+        if (!diagnostics) return 0;
+        let score = 100;
+        if (diagnostics.status === 'error') score -= 50;
+
+        Object.values(diagnostics.checks || {}).forEach(check => {
+            if (check.status !== 'ok') score -= 15;
         });
 
-        // Load Analytics
-        setTopPages(Analytics.getTopPages(5));
-    }, [memorials, pages]);
+        return Math.max(0, score);
+    };
+
+    const healthScore = calculateHealth();
+    const isHealthy = healthScore > 80;
 
     const handleExportJSON = () => {
-        const jsonString = JSON.stringify(memorials, null, 2);
+        const jsonString = JSON.stringify({ memorials, pages, date: new Date() }, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
-        link.setAttribute("download", `memorials_backup_${new Date().toLocaleDateString()}.json`);
+        link.setAttribute("download", `site_backup_${new Date().toISOString().split('T')[0]}.json`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-    };
-
-    const [showModal, setShowModal] = useState(false);
-    const [modalContent, setModalContent] = useState({ title: '', body: '' });
-
-    const openModal = (title, body) => {
-        setModalContent({ title, body });
-        setShowModal(true);
-    };
-
-    const handleShowLogs = () => {
-        // Mock Logs
-        const logs = [
-            `[${new Date().toLocaleTimeString('he-IL')}] המערכת נטענה בהצלחה`,
-            `[${new Date().toLocaleTimeString('he-IL')}] בדיקת תקינות מסד נתונים עברה`,
-            `[${new Date().toLocaleTimeString('he-IL')}] משתמש 'Admin' התחבר למערכת`,
-            `[${new Date().toLocaleTimeString('he-IL')}] נתונים סונכרנו מול השרת`
-        ].join('\n');
-
-        const blob = new Blob([logs], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'system_logs.txt';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        openModal("הורדת יומן שגיאות", "יומן המערכת (system_logs.txt) והורד למחשבך בהצלחה.");
-    };
-
-    const handleShowHistory = () => {
-        const history = (
-            <div className="space-y-4 text-right" dir="rtl">
-                <div className="border-b pb-2">
-                    <h4 className="font-bold text-lg text-blue-600">v2.1 (07/02/2026)</h4>
-                    <ul className="list-disc list-inside text-gray-700">
-                        <li>לוח בקרה טכני חדש עם אנליטיקה</li>
-                        <li>דיאגנוסטיקה מתקדמת (DNA)</li>
-                        <li>תיקון מיון תאריכים עבריים</li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 className="font-bold text-lg text-gray-600">v2.0 (05/02/2026)</h4>
-                    <ul className="list-disc list-inside text-gray-700">
-                        <li>העלאת מסד נתונים מחודש</li>
-                        <li>תיקון תצוגת לוח שנה</li>
-                    </ul>
-                </div>
-            </div>
-        );
-        openModal("היסטוריית גרסאות", history);
     };
 
     return (
@@ -100,11 +66,13 @@ const TechnicianDashboard = ({ memorials, pages, onNavigate }) => {
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800">לוח בקרה טכני</h1>
-                    <p className="text-gray-500">סקירת מערכת ותחזוקה שוטפת</p>
+                    <p className="text-gray-500">סטטוס מערכת בזמן אמת</p>
                 </div>
-                <div className="flex items-center gap-2 bg-green-50 px-4 py-2 rounded-full border border-green-200">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-green-700 font-bold text-sm">המערכת תקינה V2.1</span>
+                <div className={`flex items-center gap-2 px-4 py-2 rounded-full border ${isHealthy ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className={`w-3 h-3 rounded-full animate-pulse ${isHealthy ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                    <span className={`font-bold text-sm ${isHealthy ? 'text-green-700' : 'text-red-700'}`}>
+                        {isHealthy ? 'המערכת תקינה' : 'נדרשת תשומת לב'}
+                    </span>
                 </div>
             </div>
 
@@ -113,63 +81,59 @@ const TechnicianDashboard = ({ memorials, pages, onNavigate }) => {
                 <StatsCard
                     icon={<Users className="w-6 h-6 text-blue-500" />}
                     label="סה״כ אזכרות"
-                    value={stats.totalMemorials.toLocaleString()}
-                    trend="+12 השבוע"
+                    value={memorials.length.toLocaleString()}
+                    trend="Live Data"
                 />
                 <StatsCard
                     icon={<FileText className="w-6 h-6 text-purple-500" />}
                     label="דפי תוכן"
-                    value={stats.totalPages}
-                    trend="מעודכן"
+                    value={pages.length}
+                    trend="Live Data"
                 />
                 <StatsCard
                     icon={<Activity className="w-6 h-6 text-green-500" />}
                     label="ציון בריאות"
-                    value={`${stats.systemHealth}%`}
-                    Color="text-green-600"
+                    value={diagnostics ? `${healthScore}%` : '...'}
+                    Color={isHealthy ? "text-green-600" : "text-red-600"}
                 />
                 <StatsCard
                     icon={<Shield className="w-6 h-6 text-indigo-500" />}
-                    label="נקודות תורפה"
-                    value={stats.vulnerabilities}
-                    subtext="סריקה אחרונה: היום"
+                    label="PHP Version"
+                    value={diagnostics?.checks?.php_version?.value || '...'}
+                    subtext="Server Environment"
                     Color="text-gray-800"
                 />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-                {/* Main Content: Tasks & Health */}
+                {/* Main Content: Real Diagnostics */}
                 <div className="lg:col-span-2 space-y-8">
 
-                    {/* Active Tasks */}
+                    {/* System Checks */}
                     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold flex items-center gap-2">
-                                <ListTodo className="w-5 h-5 text-orange-500" />
-                                משימות תחזוקה
+                                <Server className="w-5 h-5 text-gray-600" />
+                                בדיקות מערכת (Live)
                             </h3>
-                            <button className="text-sm text-blue-600 hover:underline">ניהול משימות</button>
+                            <button
+                                onClick={fetchDiagnostics}
+                                disabled={loadingInfo}
+                                className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                            >
+                                <RefreshCw size={14} className={loadingInfo ? "animate-spin" : ""} /> רענן
+                            </button>
                         </div>
-                        <div className="space-y-3">
-                            <TaskItem
-                                title="גיבוי מסד נתונים חודשי"
-                                status="pending"
-                                priority="medium"
-                                date="01/03/2026"
-                            />
-                            <TaskItem
-                                title="עדכון גרסת React (v19.2)"
-                                status="completed"
-                                priority="low"
-                                date="הושלם"
-                            />
-                            <TaskItem
-                                title="בדיקת תאימות דפדפנים"
-                                status="completed"
-                                priority="high"
-                                date="הושלם"
-                            />
-                        </div>
+
+                        {!diagnostics ? (
+                            <div className="text-center py-8 text-gray-400">טוען נתונים...</div>
+                        ) : (
+                            <div className="space-y-3">
+                                {Object.values(diagnostics.checks).map((check, idx) => (
+                                    <TaskItem key={idx} check={check} />
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Top Pages Analytics */}
@@ -177,7 +141,7 @@ const TechnicianDashboard = ({ memorials, pages, onNavigate }) => {
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold flex items-center gap-2">
                                 <Users className="w-5 h-5 text-purple-500" />
-                                דפים נצפים ביותר (Top 5)
+                                דפים נצפים ביותר (מקומי)
                             </h3>
                         </div>
                         <div className="space-y-3">
@@ -200,13 +164,12 @@ const TechnicianDashboard = ({ memorials, pages, onNavigate }) => {
                     </div>
                 </div>
 
-                {/* Sidebar: Quick Actions & Log */}
+                {/* Sidebar: Quick Actions */}
                 <div className="space-y-6">
-                    {/* Technician Quick Actions */}
                     <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-2xl p-6 shadow-lg">
                         <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                            <Server className="w-5 h-5" />
-                            פעולות טכנאי
+                            <Database className="w-5 h-5" />
+                            פעולות תחזוקה
                         </h3>
                         <div className="space-y-3">
                             <button
@@ -214,71 +177,15 @@ const TechnicianDashboard = ({ memorials, pages, onNavigate }) => {
                                 className="w-full bg-white/10 hover:bg-white/20 transition p-3 rounded-lg text-right flex items-center gap-3"
                             >
                                 <Database className="w-4 h-4" />
-                                ייצוא נתונים (JSON)
+                                גיבוי נתונים מלא (JSON)
                             </button>
-                            <button
-                                onClick={handleShowLogs}
-                                className="w-full bg-white/10 hover:bg-white/20 transition p-3 rounded-lg text-right flex items-center gap-3"
-                            >
-                                <AlertTriangle className="w-4 h-4" />
-                                יומן שגיאות (Error Log)
-                            </button>
-                            <button
-                                onClick={handleShowHistory}
-                                className="w-full bg-white/10 hover:bg-white/20 transition p-3 rounded-lg text-right flex items-center gap-3"
-                            >
-                                <Clock className="w-4 h-4" />
-                                היסטוריית שינויים
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100">
-                        <h4 className="font-bold text-blue-800 mb-2">עדכון מערכת אחרון</h4>
-                        <p className="text-sm text-blue-600 mb-4">
-                            בוצע עדכון גרסה 2.1 הכולל תיקון לוח שנה ושיפורי אבטחה.
-                        </p>
-                        <span className="text-xs text-blue-400 font-mono">Build: v2.1.0-beta</span>
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mt-6">
-                        <h3 className="text-xl font-bold flex items-center gap-2 mb-6">
-                            <Activity className="w-5 h-5 text-blue-500" />
-                            סטטוס רכיבים
-                        </h3>
-                        <div className="space-y-3">
-                            <HealthCheckItem label="Database" status="ok" />
-                            <HealthCheckItem label="API Latency" status="ok" value="45ms" />
-                            <HealthCheckItem label="Storage" status="ok" value="12%" />
+                            <div className="text-xs text-gray-400 mt-2 p-2 bg-black/20 rounded">
+                                * מוריד קובץ המכיל את כל האזכרות והדפים כרגע במערכת.
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            {/* Custom Modal */}
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in" dir="rtl">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all scale-100">
-                        <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                            <h3 className="font-bold text-lg text-gray-800">{modalContent.title}</h3>
-                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-red-500 transition">
-                                <CheckCircle className="w-5 h-5 rotate-45 text-gray-500 hover:text-red-500" style={{ transform: 'rotate(45deg)' }} />
-                            </button>
-                        </div>
-                        <div className="p-6 text-gray-600">
-                            {modalContent.body}
-                        </div>
-                        <div className="bg-gray-50 px-6 py-4 flex justify-end">
-                            <button
-                                onClick={() => setShowModal(false)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
-                            >
-                                סגור
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
@@ -290,7 +197,7 @@ const StatsCard = ({ icon, label, value, trend, subtext, Color }) => (
             <div className="p-3 bg-gray-50 rounded-xl">
                 {icon}
             </div>
-            {trend && <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">{trend}</span>}
+            {trend && <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{trend}</span>}
         </div>
         <div className="text-gray-500 text-sm mb-1">{label}</div>
         <div className={`text-2xl font-bold ${Color || 'text-gray-800'}`}>{value}</div>
@@ -298,38 +205,20 @@ const StatsCard = ({ icon, label, value, trend, subtext, Color }) => (
     </div>
 );
 
-const TaskItem = ({ title, status, priority, date }) => (
+const TaskItem = ({ check }) => (
     <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition border border-gray-100">
         <div className="flex items-center gap-3">
-            <div className={`w-2 h-2 rounded-full ${priority === 'high' ? 'bg-red-500' : priority === 'medium' ? 'bg-orange-500' : 'bg-blue-500'}`}></div>
-            <span className={`text-sm font-medium ${status === 'completed' ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                {title}
+            <div className={`w-2 h-2 rounded-full ${check.status === 'ok' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <span className="text-sm font-medium text-gray-700">
+                {check.label}
             </span>
         </div>
         <div className="flex items-center gap-4">
-            <span className="text-xs text-gray-400">{date}</span>
-            {status === 'completed' ? (
+            <span className="text-xs text-gray-500 font-mono">{check.value}</span>
+            {check.status === 'ok' ? (
                 <CheckCircle className="w-4 h-4 text-green-500" />
             ) : (
-                <div className="w-4 h-4 border-2 border-gray-300 rounded-full"></div>
-            )}
-        </div>
-    </div>
-);
-
-const HealthCheckItem = ({ label, status, value }) => (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-        <span className="text-sm font-medium text-gray-600">{label}</span>
-        <div className="flex items-center gap-2">
-            {value && <span className="text-xs font-mono text-gray-500">{value}</span>}
-            {status === 'ok' ? (
-                <div className="flex items-center gap-1 text-xs font-bold text-green-600">
-                    <CheckCircle className="w-3 h-3" /> OK
-                </div>
-            ) : (
-                <div className="flex items-center gap-1 text-xs font-bold text-orange-600">
-                    <AlertTriangle className="w-3 h-3" /> Warn
-                </div>
+                <AlertTriangle className="w-4 h-4 text-red-500" />
             )}
         </div>
     </div>
