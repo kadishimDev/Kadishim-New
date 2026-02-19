@@ -98,7 +98,7 @@ const AccessibilityWidget = () => {
                 />
             )}
 
-            <div className="fixed right-4 bottom-4 z-[9999] flex flex-col items-end gap-2 rtl:right-4 rtl:left-auto">
+            <div id="accessibility-widget" className="fixed right-4 bottom-4 z-[9999] flex flex-col items-end gap-2 rtl:right-4 rtl:left-auto">
 
                 {/* Panel */}
                 {isOpen && (

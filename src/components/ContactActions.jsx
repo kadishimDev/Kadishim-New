@@ -8,7 +8,7 @@ const ContactActions = () => {
     const { phone, email, whatsapp } = settings.contact;
 
     return (
-        <div style={{ position: 'fixed', bottom: '24px', left: '24px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div id="contact-actions" style={{ position: 'fixed', bottom: '24px', left: '24px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {/* WhatsApp */}
             <a
                 href={`https://wa.me/${whatsapp}`}

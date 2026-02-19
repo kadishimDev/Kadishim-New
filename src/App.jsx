@@ -81,7 +81,7 @@ const Layout = ({ children, pages }) => {
       {!isAdmin && <Navbar pages={pages} />}
       {!isAdmin && <AccessibilityWidget />}
       {/* Increased padding to prevent Navbar overlap (header is tall) */}
-      <main id="main-content" className={`flex-grow`} style={{ paddingTop: !isAdmin && !isHome ? '160px' : '0' }}>
+      <main id="main-content" className={`flex-grow`} style={{ paddingTop: !isAdmin && !isHome ? '165px' : '0' }}>
         {children}
       </main>
       {!isAdmin && <Footer />}

@@ -24,7 +24,7 @@ const fontSizeOptions = [
     { id: 'text-2xl', label: 'ענק', scale: 1.5 },
 ];
 
-const MemorialServiceGenerator = () => {
+const MemorialServiceGenerator = ({ onViewChange }) => {
     const [searchParams, setSearchParams] = useSearchParams();
     const initialTab = searchParams.get('tab') || 'tehillim';
 
@@ -45,6 +45,11 @@ const MemorialServiceGenerator = () => {
 
     const [activeTab, setActiveTabState] = useState(initialTab);
     const [generatedContent, setGeneratedContent] = useState(null);
+
+    // Notify parent when switching between form/generated views
+    useEffect(() => {
+        if (onViewChange) onViewChange(!!generatedContent);
+    }, [generatedContent, onViewChange]);
     const [generationMeta, setGenerationMeta] = useState({ name: '', motherName: '' }); // Store resolved Hebrew names
     const [showNeshama, setShowNeshama] = useState(true);
     const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -255,7 +260,38 @@ const MemorialServiceGenerator = () => {
                 allowTaint: true,
                 backgroundColor: '#ffffff',
                 logging: false,
-                windowWidth: 1200
+                windowWidth: 1200,
+                onclone: (clonedDoc) => {
+                    const clonedContainer = clonedDoc.getElementById('hidden-print-container');
+                    if (clonedContainer) {
+                        // Force visibility and correct positioning in the clone
+                        clonedContainer.style.opacity = '1';
+                        clonedContainer.style.visibility = 'visible';
+                        clonedContainer.style.display = 'block';
+                        clonedContainer.style.position = 'absolute';
+                        clonedContainer.style.left = '0px';
+                        clonedContainer.style.top = '0px';
+                        clonedContainer.style.zIndex = '99999';
+                        clonedContainer.style.background = '#ffffff';
+
+                        // Hide specific floating artifacts using the IDs we added
+                        const elementsToHide = [
+                            'header',
+                            'nav',
+                            '#accessibility-widget',
+                            '#contact-actions',
+                            '#google_translate_element',
+                            '.goog-te-banner-frame'
+                        ];
+
+
+                        elementsToHide.forEach(selector => {
+                            const els = clonedDoc.querySelectorAll(selector);
+                            els.forEach(el => el.style.display = 'none');
+                        });
+                    }
+                }
+
             });
             return canvas;
         } catch (err) {
@@ -370,65 +406,64 @@ const MemorialServiceGenerator = () => {
     // We can add a "Back to Edit" button.
     if (generatedContent) {
         return (
-            <div className="container mx-auto px-4 py-8 animate-fade-in-up overflow-x-hidden">
-                {/* Toolbar - not sticky on mobile to prevent overlapping content */}
-                <div className="md:sticky md:top-24 z-30 bg-white/95 backdrop-blur shadow-lg rounded-2xl p-3 md:p-4 mb-6 md:mb-8 border border-gray-200">
-                    {/* Row 1: Back button */}
-                    <div className="flex justify-between items-center mb-3">
-                        <button
-                            onClick={() => setGeneratedContent(null)}
-                            className="flex items-center gap-2 text-gray-600 hover:text-orange-600 font-bold transition-colors text-sm md:text-base"
-                        >
-                            <ArrowLeft size={18} /> חזרה לעריכה
-                        </button>
-                    </div>
-
-                    {/* Row 2: Font options */}
-                    <div className="flex flex-wrap items-center gap-2 md:gap-4 mb-3">
-                        <div className="flex items-center gap-1">
-                            <Type size={16} className="text-gray-400 hidden md:block" />
-                            <select
-                                value={selectedFont.id}
-                                onChange={(e) => setSelectedFont(fontOptions.find(f => f.id === e.target.value))}
-                                className="bg-gray-50 border border-gray-300 rounded-lg py-1 px-2 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+            <div className="container mx-auto px-2 md:px-4 py-4 md:py-8 animate-fade-in-up overflow-x-hidden">
+                {/* Toolbar - static to ensure no overlap */}
+                <div className="relative z-30 bg-white shadow-lg rounded-2xl p-2 md:p-3 mb-6 border border-gray-200">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-3">
+                        {/* Left Side: Back & Config */}
+                        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
+                            <button
+                                onClick={() => setGeneratedContent(null)}
+                                className="flex items-center gap-2 text-gray-600 hover:text-orange-600 font-bold transition-colors text-sm"
                             >
-                                {fontOptions.map(font => (
-                                    <option key={font.id} value={font.id}>{font.label}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-1 md:gap-2">
-                            <span className="text-gray-400 text-xs md:text-sm hidden md:inline">גודל:</span>
-                            <div className="flex bg-gray-100 rounded-lg p-0.5 md:p-1">
-                                {fontSizeOptions.map(size => (
-                                    <button
-                                        key={size.id}
-                                        onClick={() => setSelectedSize(size)}
-                                        className={`px-2 md:px-3 py-1 rounded text-xs md:text-sm font-bold transition-all ${selectedSize.id === size.id ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:bg-gray-200'}`}
-                                    >
-                                        {size.label}
-                                    </button>
-                                ))}
+                                <ArrowLeft size={16} /> <span className="hidden sm:inline">חזרה</span>
+                            </button>
+
+                            <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
+
+                            {/* Font Controls */}
+                            <div className="flex items-center gap-2">
+                                <select
+                                    value={selectedFont.id}
+                                    onChange={(e) => setSelectedFont(fontOptions.find(f => f.id === e.target.value))}
+                                    className="bg-gray-50 border border-gray-300 rounded text-sm py-1 px-2 focus:ring-2 focus:ring-orange-500 outline-none w-32"
+                                >
+                                    {fontOptions.map(font => (
+                                        <option key={font.id} value={font.id}>{font.label}</option>
+                                    ))}
+                                </select>
+
+                                <div className="flex bg-gray-100 rounded p-1">
+                                    {fontSizeOptions.map(size => (
+                                        <button
+                                            key={size.id}
+                                            onClick={() => setSelectedSize(size)}
+                                            className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${selectedSize.id === size.id ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:bg-gray-200'}`}
+                                        >
+                                            {size.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Row 3: Download buttons */}
-                    <div className="flex flex-col sm:flex-row gap-2">
-                        <button
-                            onClick={handleDownloadPDF}
-                            disabled={isExportingPdf || isExportingImage}
-                            className={`flex items-center justify-center gap-2 bg-gray-900 hover:bg-black text-white px-4 md:px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg text-sm md:text-base flex-1 ${(isExportingPdf || isExportingImage) ? 'opacity-70 cursor-wait' : ''}`}
-                        >
-                            {isExportingPdf ? 'מייצר PDF...' : <><Download size={16} /> הורדה כ-PDF</>}
-                        </button>
-                        <button
-                            onClick={handleDownloadImage}
-                            disabled={isExportingPdf || isExportingImage}
-                            className={`flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 md:px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg text-sm md:text-base flex-1 ${(isExportingPdf || isExportingImage) ? 'opacity-70 cursor-wait' : ''}`}
-                        >
-                            {isExportingImage ? 'מייצר תמונה...' : <><ImageIcon size={16} /> הורדה כתמונה</>}
-                        </button>
+                        {/* Right Side: Actions */}
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            <button
+                                onClick={handleDownloadPDF}
+                                disabled={isExportingPdf || isExportingImage}
+                                className={`flex items-center justify-center gap-2 bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-lg font-bold transition-all shadow-sm text-sm flex-1 md:flex-none ${(isExportingPdf || isExportingImage) ? 'opacity-70 cursor-wait' : ''}`}
+                            >
+                                {isExportingPdf ? 'מייצר...' : <><Download size={14} /> PDF</>}
+                            </button>
+                            <button
+                                onClick={handleDownloadImage}
+                                disabled={isExportingPdf || isExportingImage}
+                                className={`flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-sm text-sm flex-1 md:flex-none ${(isExportingPdf || isExportingImage) ? 'opacity-70 cursor-wait' : ''}`}
+                            >
+                                {isExportingImage ? 'מייצר...' : <><ImageIcon size={14} /> תמונה</>}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -515,7 +550,9 @@ const MemorialServiceGenerator = () => {
                                     </div>
                                 );
                                 if (item.type === 'section_title') return (
-                                    <h3 key={idx} className="text-2xl font-bold text-center text-gray-800 border-b-2 border-orange-500 inline-block px-8 pb-1 mb-8 mt-12 mx-auto block">{item.text}</h3>
+                                    <div key={idx} className="text-center mt-12 mb-8">
+                                        <h3 className="text-2xl font-bold text-gray-800 border-b-2 border-orange-500 w-fit mx-auto px-8 pb-1">{item.text}</h3>
+                                    </div>
                                 );
                                 if (item.type === 'header_info') return (
                                     <div key={idx} className="text-center text-gray-600 font-medium text-lg mb-8 italic bg-gray-50 py-2 rounded">
@@ -541,9 +578,10 @@ const MemorialServiceGenerator = () => {
                             {generatedContent.map((item, idx) => (
                                 <div key={idx} className="measurement-item bg-white">
                                     {item.type === 'verse' && (
-                                        <div className="mb-3">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full font-bold border bg-orange-50 text-orange-800 border-orange-200" style={{ fontSize: '12px' }}>{item.char}</span>
+                                        <div className="mb-4">
+                                            {/* Verse styling: Char block then text */}
+                                            <div className="mb-1 text-right">
+                                                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full font-bold border bg-orange-50 text-orange-800 border-orange-200" style={{ fontSize: '18px', lineHeight: '1', paddingBottom: '8px' }}>{item.char}</span>
                                             </div>
                                             <div className="text-justify leading-relaxed text-gray-900">
                                                 {item.data ? item.data.map((l, i) => <span key={i}>{l} </span>) : '...'}
@@ -563,7 +601,11 @@ const MemorialServiceGenerator = () => {
                                         </div>
                                     )}
                                     {item.type === 'section_title' && (
-                                        <h3 className="font-bold text-center text-gray-800 border-b-2 border-orange-500 inline-block px-4 pb-1 mb-3 mt-3 mx-auto block w-max" style={{ fontSize: `${20 * selectedSize.scale}px` }}>{item.text}</h3>
+                                        <div className="text-center mt-6 mb-4">
+                                            <div className="inline-block border-b-2 border-orange-500 pb-2 px-6">
+                                                <h3 className="font-bold text-gray-800 text-center" style={{ fontSize: `${20 * selectedSize.scale}px`, lineHeight: '1.2' }}>{item.text}</h3>
+                                            </div>
+                                        </div>
                                     )}
                                     {item.type === 'header_info' && (
                                         <div className="text-center text-gray-500 font-medium opacity-75 mb-3 italic py-1 bg-gray-50 rounded" style={{ fontSize: `${14 * selectedSize.scale}px` }}>{item.text}</div>
@@ -615,9 +657,10 @@ const MemorialServiceGenerator = () => {
                                     {pageItems.map((item, idx) => (
                                         <div key={idx} className="page-break-inside-avoid">
                                             {item.type === 'verse' && (
-                                                <div className="mb-3">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full font-bold border bg-orange-50 text-orange-800 border-orange-200" style={{ fontSize: '12px' }}>{item.char}</span>
+                                                <div className="mb-4">
+                                                    {/* Verse styling: Char block then text - MATCHING MEASUREMENT LOOP */}
+                                                    <div className="mb-1 text-right">
+                                                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full font-bold border bg-orange-50 text-orange-800 border-orange-200" style={{ fontSize: '18px', lineHeight: '1', paddingBottom: '8px' }}>{item.char}</span>
                                                     </div>
                                                     <div className="text-justify leading-relaxed text-gray-900">
                                                         {item.data ? item.data.map((l, i) => <span key={i}>{l} </span>) : '...'}
@@ -637,7 +680,11 @@ const MemorialServiceGenerator = () => {
                                                 </div>
                                             )}
                                             {item.type === 'section_title' && (
-                                                <h3 className="font-bold text-center text-gray-800 border-b-2 border-orange-500 inline-block px-4 pb-1 mb-3 mt-3 mx-auto block w-max" style={{ fontSize: `${20 * selectedSize.scale}px` }}>{item.text}</h3>
+                                                <div className="text-center mt-6 mb-4">
+                                                    <div className="inline-block border-b-2 border-orange-500 pb-2 px-6">
+                                                        <h3 className="font-bold text-gray-800 text-center" style={{ fontSize: `${20 * selectedSize.scale}px`, lineHeight: '1.2' }}>{item.text}</h3>
+                                                    </div>
+                                                </div>
                                             )}
                                             {item.type === 'header_info' && (
                                                 <div className="text-center text-gray-500 font-medium opacity-75 mb-3 italic py-1 bg-gray-50 rounded" style={{ fontSize: `${14 * selectedSize.scale}px` }}>{item.text}</div>
@@ -660,7 +707,7 @@ const MemorialServiceGenerator = () => {
 
     // Input Form Mode
     return (
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-orange-100 my-8">
+        <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border border-orange-100 my-4">
             {/* Header Tabs */}
             <div className="flex flex-col sm:flex-row bg-gray-100 border-b border-gray-200">
                 <button onClick={() => { setActiveTab('tehillim'); setGeneratedContent(null); }} className={`flex-1 py-3 md:py-4 font-bold text-center text-sm md:text-base transition-all ${activeTab === 'tehillim' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-200'} `}>תהילים לפי שם</button>
