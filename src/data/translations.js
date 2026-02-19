@@ -7,7 +7,7 @@ export const translations = {
             home: 'דף הבית',
             request: 'בקשת קדיש',
             library: 'ספריית הקדיש',
-            generators: 'מחוללים',
+            generators: 'יצירת תפילות',
             admin: 'ניהול',
             about: 'אודות',
             contact: 'צור קשר',

@@ -1,6 +1,4 @@
 import React, { useState, useRef } from 'react';
-import Navbar from './Navbar';
-import Footer from './Footer';
 import { kaddishData } from '../data/kaddishData';
 import { BookOpen, ChevronLeft, ArrowRight, Download, Image as ImageIcon, Printer } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -142,9 +140,7 @@ const KaddishLibrary = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-            <Navbar />
-
-            <div className="container mx-auto px-4 py-8 flex-grow mt-24 print:mt-0 print:p-0">
+            <div className="container mx-auto px-4 py-8 flex-grow pt-8 print:mt-0 print:p-0">
                 {/* Header (Hidden on Print) */}
                 <div className="text-center mb-12 print:hidden">
                     <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">ספריית הקדיש</h1>
@@ -265,8 +261,6 @@ const KaddishLibrary = () => {
                     </div>
                 </div>
             </div>
-
-            <Footer />
         </div>
     );
 };

@@ -1,49 +1,49 @@
 {
-    "general": {
-        "siteTitle": "קדישים",
-        "siteDescription": "שירותי קדיש והנצחה",
-        "logoUrl": "./assets/logo.png",
-        "faviconUrl": "./favicon.ico",
-        "footerText": "© 2026 כל הזכויות שמורות לארגון קדישים."
-    },
-    "contact": {
-        "phone": "050-1234567",
-        "whatsapp": "972501234567",
-        "email": "info@kadishim.co.il",
-        "address": "ירושלים, ישראל",
-        "officeHours": "א-ה 09:00-17:00"
-    },
-    "social": {
-        "facebook": "https://facebook.com",
-        "instagram": "https://instagram.com",
-        "youtube": "",
-        "twitter": ""
-    },
-    "analytics": {
-        "googleAnalyticsId": "",
-        "facebookPixelId": "",
-        "customHeadScripts": "",
-        "customBodyScripts": ""
-    },
-    "notifications": {
-        "adminEmail": "service@kadishim.co.il",
-        "contactEmail": "contact@kadishim.co.il",
-        "requestEmail": "request@kadishim.co.il",
-        "serviceEmail": "service@kadishim.co.il",
-        "enableEmailAlerts": true,
-        "enableSmsAlerts": false,
-        "smsPhoneNumber": ""
-    },
-    "features": {
-        "maintenanceMode": false,
-        "enableDonations": true,
-        "enableBlog": true,
-        "showHolidayBanner": false,
-        "holidayBannerText": "המוקד סגור בחג הפסח"
-    },
-    "upress": {
-        "cdnEnabled": true,
-        "wafMode": "active",
-        "devMode": false
-    }
+  "general": {
+    "siteTitle": "קדישים",
+    "siteDescription": "שירותי קדיש והנצחה",
+    "logoUrl": "./assets/logo.png",
+    "faviconUrl": "./favicon.ico",
+    "footerText": "© 2026 כל הזכויות שמורות לארגון קדישים."
+  },
+  "contact": {
+    "phone": "050-1234567",
+    "whatsapp": "972501234567",
+    "email": "contact@kadishim.co.il",
+    "address": "ירושלים, ישראל",
+    "officeHours": "א-ה 09:00-17:00"
+  },
+  "social": {
+    "facebook": "https://facebook.com",
+    "instagram": "https://instagram.com",
+    "youtube": "",
+    "twitter": ""
+  },
+  "analytics": {
+    "googleAnalyticsId": "",
+    "facebookPixelId": "",
+    "customHeadScripts": "",
+    "customBodyScripts": ""
+  },
+  "notifications": {
+    "adminEmail": "service@kadishim.co.il",
+    "contactEmail": "contact@kadishim.co.il",
+    "requestEmail": "request@kadishim.co.il",
+    "serviceEmail": "service@kadishim.co.il",
+    "enableEmailAlerts": true,
+    "enableSmsAlerts": false,
+    "smsPhoneNumber": ""
+  },
+  "features": {
+    "maintenanceMode": false,
+    "enableDonations": true,
+    "enableBlog": true,
+    "showHolidayBanner": false,
+    "holidayBannerText": "המוקד סגור בחג הפסח"
+  },
+  "upress": {
+    "cdnEnabled": true,
+    "wafMode": "active",
+    "devMode": false
+  }
 }

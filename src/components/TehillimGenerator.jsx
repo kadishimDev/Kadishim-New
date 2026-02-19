@@ -123,8 +123,15 @@ const MemorialServiceGenerator = () => {
         } else if (activeTab === 'grave') {
             // Grave Service Composition based on user feedback (Full Traditional Order)
 
-            // 1. Tehillim for Name
-            const tehillimName = nameLetters.map(item => ({ ...item, data: tehillimLetters[item.normalized], type: 'verse' }));
+            // 1. Tehillim for FULL Name (name + בן/בת + parent name)
+            // e.g., "משה בן איטו" → מ.ש.ה.ב.ן.א.י.ט.ו
+            const connector = isBat ? 'בת' : 'בן';
+            const processMotherName = motherName && isEnglish(motherName) ? transliterateName(motherName) : motherName;
+            const fullNameStr = processMotherName
+                ? `${processName} ${connector} ${processMotherName}`
+                : processName;
+            const fullNameLetters = decomposeName(fullNameStr);
+            const tehillimName = fullNameLetters.map(item => ({ ...item, data: tehillimLetters[item.normalized], type: 'verse' }));
 
             // 2. Tehillim for Neshama (N.S.M.H)
             const neshamaArr = ['נ', 'ש', 'מ', 'ה'].map(c => ({ char: c, normalized: c === 'ה' ? 'ה' : c === 'מ' ? 'מ' : c === 'ש' ? 'ש' : 'נ', isNeshama: true })); // Simple map
@@ -180,7 +187,7 @@ const MemorialServiceGenerator = () => {
                 { type: 'header_info', text: `סדר אזכרה ל${gender === 'male' ? 'מנוח' : 'מנוחה'} ${cleanDisplay} ${isBat ? 'בת' : 'בן'} ${cleanMother || '______'}` },
 
                 // Tehillim Section
-                { type: 'section_title', text: getGenderedText(`פרקי תהילים לפי שם הנפטר/ת: ${cleanDisplay}`, gender) },
+                { type: 'section_title', text: getGenderedText(`פרקי תהילים לפי שם הנפטר/ת: ${cleanDisplay} ${cleanMother ? (isBat ? 'בת' : 'בן') + ' ' + cleanMother : ''}`, gender) },
                 ...tehillimName,
 
                 { type: 'section_title', text: 'אותיות נשמה - קריעת רוע גזר הדין' }, // Neshama + Kra Satan
@@ -222,19 +229,8 @@ const MemorialServiceGenerator = () => {
             setGeneratedContent(prayerPart);
         }
 
-        // Store display names for the render view if simple generation
-        if (activeTab !== 'grave') {
-            // We need a way to pass the converted names to the render view without changing the input state (optional, or we just rely on generated content?). 
-            // Actually, the render view uses 'name' and 'motherName' state variables.
-            // We should probably update a temp state or just force update the state?
-            // User might want to see the Hebrew name in the input box... usually better UX to update the input?
-            // Let's decide: implied requirement is "if user wrote SARAH, generate for Sarah". 
-            // The render view sees {name}. Let's update a separate state for "displayName" or just use the local variables if we pass them?
-            // Easiest: pass them in the content object or separate state.
-            // But 'generatedContent' is just the array.
-            // Let's create a 'generationMeta' state or similar.
-            setGenerationMeta({ name: displayName, motherName: displayMother });
-        }
+        // Store display names for the render view (all modes)
+        setGenerationMeta({ name: displayName, motherName: displayMother });
     };
 
     const generateCanvas = async (element) => {
@@ -374,81 +370,83 @@ const MemorialServiceGenerator = () => {
     // We can add a "Back to Edit" button.
     if (generatedContent) {
         return (
-            <div className="container mx-auto px-4 py-8 animate-fade-in-up">
-                {/* Toolbar */}
-                <div className="sticky top-24 z-30 bg-white/95 backdrop-blur shadow-lg rounded-2xl p-4 mb-8 flex flex-wrap gap-4 justify-between items-center border border-gray-200">
-                    <button
-                        onClick={() => setGeneratedContent(null)}
-                        className="flex items-center gap-2 text-gray-600 hover:text-orange-600 font-bold transition-colors"
-                    >
-                        <ArrowLeft size={20} /> חזרה לעריכה
-                    </button>
+            <div className="container mx-auto px-4 py-8 animate-fade-in-up overflow-x-hidden">
+                {/* Toolbar - not sticky on mobile to prevent overlapping content */}
+                <div className="md:sticky md:top-24 z-30 bg-white/95 backdrop-blur shadow-lg rounded-2xl p-3 md:p-4 mb-6 md:mb-8 border border-gray-200">
+                    {/* Row 1: Back button */}
+                    <div className="flex justify-between items-center mb-3">
+                        <button
+                            onClick={() => setGeneratedContent(null)}
+                            className="flex items-center gap-2 text-gray-600 hover:text-orange-600 font-bold transition-colors text-sm md:text-base"
+                        >
+                            <ArrowLeft size={18} /> חזרה לעריכה
+                        </button>
+                    </div>
 
-                    <div className="flex items-center gap-6">
-                        {/* Font Family */}
-                        <div className="flex items-center gap-2">
-                            <Type size={18} className="text-gray-400" />
+                    {/* Row 2: Font options */}
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4 mb-3">
+                        <div className="flex items-center gap-1">
+                            <Type size={16} className="text-gray-400 hidden md:block" />
                             <select
                                 value={selectedFont.id}
                                 onChange={(e) => setSelectedFont(fontOptions.find(f => f.id === e.target.value))}
-                                className="bg-gray-50 border border-gray-300 rounded-lg py-1 px-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                                className="bg-gray-50 border border-gray-300 rounded-lg py-1 px-2 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                             >
                                 {fontOptions.map(font => (
                                     <option key={font.id} value={font.id}>{font.label}</option>
                                 ))}
                             </select>
                         </div>
-
-                        {/* Font Size */}
-                        <div className="flex items-center gap-2 border-r border-gray-200 pr-6 mr-2">
-                            <span className="text-gray-400 text-sm">גודל טקסט:</span>
-                            <div className="flex bg-gray-100 rounded-lg p-1">
+                        <div className="flex items-center gap-1 md:gap-2">
+                            <span className="text-gray-400 text-xs md:text-sm hidden md:inline">גודל:</span>
+                            <div className="flex bg-gray-100 rounded-lg p-0.5 md:p-1">
                                 {fontSizeOptions.map(size => (
                                     <button
                                         key={size.id}
                                         onClick={() => setSelectedSize(size)}
-                                        className={`px-3 py-1 rounded text-sm font-bold transition-all ${selectedSize.id === size.id ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:bg-gray-200'}`}
+                                        className={`px-2 md:px-3 py-1 rounded text-xs md:text-sm font-bold transition-all ${selectedSize.id === size.id ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:bg-gray-200'}`}
                                     >
                                         {size.label}
                                     </button>
                                 ))}
                             </div>
                         </div>
+                    </div>
 
-                        <div className="flex gap-4">
-                            <button
-                                onClick={handleDownloadPDF}
-                                disabled={isExportingPdf || isExportingImage}
-                                className={`flex items-center gap-2 bg-gray-900 hover:bg-black text-white px-6 py-2 rounded-xl font-bold transition-all shadow-xl ${(isExportingPdf || isExportingImage) ? 'opacity-70 cursor-wait' : ''}`}
-                            >
-                                {isExportingPdf ? 'מייצר PDF...' : <><Download size={18} /> הורדה כ-PDF</>}
-                            </button>
-                            <button
-                                onClick={handleDownloadImage}
-                                disabled={isExportingPdf || isExportingImage}
-                                className={`flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-xl font-bold transition-all shadow-xl ${(isExportingPdf || isExportingImage) ? 'opacity-70 cursor-wait' : ''}`}
-                            >
-                                {isExportingImage ? 'מייצר תמונה...' : <><ImageIcon size={18} /> הורדה כתמונה</>}
-                            </button>
-                        </div>
+                    {/* Row 3: Download buttons */}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                            onClick={handleDownloadPDF}
+                            disabled={isExportingPdf || isExportingImage}
+                            className={`flex items-center justify-center gap-2 bg-gray-900 hover:bg-black text-white px-4 md:px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg text-sm md:text-base flex-1 ${(isExportingPdf || isExportingImage) ? 'opacity-70 cursor-wait' : ''}`}
+                        >
+                            {isExportingPdf ? 'מייצר PDF...' : <><Download size={16} /> הורדה כ-PDF</>}
+                        </button>
+                        <button
+                            onClick={handleDownloadImage}
+                            disabled={isExportingPdf || isExportingImage}
+                            className={`flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 md:px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg text-sm md:text-base flex-1 ${(isExportingPdf || isExportingImage) ? 'opacity-70 cursor-wait' : ''}`}
+                        >
+                            {isExportingImage ? 'מייצר תמונה...' : <><ImageIcon size={16} /> הורדה כתמונה</>}
+                        </button>
                     </div>
                 </div>
 
                 {/* Printable Document Area */}
-                <div className="flex justify-center">
+                <div className="flex justify-center overflow-hidden">
                     <div
                         ref={printRef}
-                        className="bg-white p-16 shadow-2xl max-w-[210mm] min-h-[297mm] w-full relative"
-                        style={{ fontFamily: selectedFont.fontFamily }} // Apply global font choice
+                        className="bg-white p-4 md:p-16 shadow-2xl max-w-[210mm] min-h-[50vh] md:min-h-[297mm] w-full relative"
+                        style={{ fontFamily: selectedFont.fontFamily }}
                     >
-                        {/* Decorative Border */}
-                        <div className="absolute inset-4 border-[3px] border-double border-orange-200 pointer-events-none"></div>
-                        <div className="absolute inset-5 border border-orange-100 pointer-events-none"></div>
+                        {/* Decorative Border - hidden on mobile to prevent overlap */}
+                        <div className="absolute inset-2 md:inset-4 border-[3px] border-double border-orange-200 pointer-events-none hidden md:block"></div>
+                        <div className="absolute inset-3 md:inset-5 border border-orange-100 pointer-events-none hidden md:block"></div>
 
                         {/* Header Section */}
-                        <div className="relative z-10 flex justify-between items-start border-b-2 border-orange-100 pb-8 mb-10">
-                            {/* Left: Rabbi Image (Real Asset) */}
-                            <div className="w-24 h-32 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden shadow-sm order-first">
+                        <div className="relative z-10 flex flex-row justify-between items-start border-b-2 border-orange-100 pb-4 md:pb-8 mb-6 md:mb-10 gap-2 md:gap-4">
+                            {/* Left: Rabbi Image */}
+                            <div className="w-16 h-20 md:w-24 md:h-32 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden shadow-sm order-first">
                                 <img
                                     src="/assets/rabbi_moshe.jpg"
                                     alt="הרב משה בן-טוב"
@@ -460,17 +458,17 @@ const MemorialServiceGenerator = () => {
 
                             {/* Center: Title */}
                             <div className="text-center pt-2 flex-1">
-                                <h1 className="text-4xl font-bold text-gray-900 mb-3 tracking-wide" style={{ fontFamily: selectedFont.fontFamily }}>
+                                <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-2 md:mb-3 tracking-wide" style={{ fontFamily: selectedFont.fontFamily }}>
                                     {activeTab === 'grave' ? 'סדר אזכרה והנצחה' : `לימוד ${activeTab === 'tehillim' ? 'תהילים' : 'משניות'} לעילוי נשמה`}
                                 </h1>
-                                <div className="text-xl text-gray-700 font-medium" style={{ fontFamily: selectedFont.fontFamily }}>
+                                <div className="text-base md:text-xl text-gray-700 font-medium" style={{ fontFamily: selectedFont.fontFamily }}>
                                     לעילוי נשמת {gender === 'male' ? 'המנוח' : 'המנוחה'} <span className="font-bold text-gray-900">{generationMeta.name || name}</span> {isBat ? 'בת' : 'בן'} <span className="font-bold">{generationMeta.motherName || motherName || '______'}</span>
                                 </div>
                                 <div className="text-sm text-gray-400 mt-2">הופק ע"י ארגון "קדישים" - kadishim.co.il</div>
                             </div>
 
                             {/* Right: Logo */}
-                            <div className="w-32 h-32 flex items-center justify-center order-last">
+                            <div className="w-20 h-20 md:w-32 md:h-32 flex items-center justify-center order-last">
                                 <img
                                     src="/assets/logo.png"
                                     alt="לוגו האתר"
@@ -517,7 +515,7 @@ const MemorialServiceGenerator = () => {
                                     </div>
                                 );
                                 if (item.type === 'section_title') return (
-                                    <h3 key={idx} className="text-2xl font-bold text-center text-gray-800 border-b-2 border-orange-500 inline-block px-8 pb-1 mb-8 mt-12 mx-auto block w-max">{item.text}</h3>
+                                    <h3 key={idx} className="text-2xl font-bold text-center text-gray-800 border-b-2 border-orange-500 inline-block px-8 pb-1 mb-8 mt-12 mx-auto block">{item.text}</h3>
                                 );
                                 if (item.type === 'header_info') return (
                                     <div key={idx} className="text-center text-gray-600 font-medium text-lg mb-8 italic bg-gray-50 py-2 rounded">
@@ -536,7 +534,7 @@ const MemorialServiceGenerator = () => {
                 </div>
                 {/* Hidden Multi-Page PDF Renderer (Must be in DOM for html2canvas) */}
                 {/* Hidden Multi-Page PDF Renderer (Measurement & Final Generation) */}
-                <div className="absolute opacity-0 pointer-events-none -left-[9999px] top-0 overflow-visible w-[210mm]">
+                <div className="fixed opacity-0 pointer-events-none left-[-200vw] top-0 overflow-hidden" style={{ width: '210mm' }}>
                     {/* Master Renderer for measuring item heights - MOULDED TO A4 DIMENSIONS */}
                     <div ref={masterListRef} className={`bg-white p-16 ${selectedSize.id}`} style={{ width: '210mm', minHeight: '297mm', fontSize: `${16 * selectedSize.scale}px`, fontFamily: selectedFont.fontFamily }}>
                         <div className="space-y-4">
@@ -664,13 +662,13 @@ const MemorialServiceGenerator = () => {
     return (
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-orange-100 my-8">
             {/* Header Tabs */}
-            <div className="flex bg-gray-100 border-b border-gray-200">
-                <button onClick={() => { setActiveTab('tehillim'); setGeneratedContent(null); }} className={`flex-1 py-4 font-bold text-center transition-all ${activeTab === 'tehillim' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-200'} `}>תהילים לפי שם</button>
-                <button onClick={() => { setActiveTab('mishnayot'); setGeneratedContent(null); }} className={`flex-1 py-4 font-bold text-center transition-all ${activeTab === 'mishnayot' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'} `}>משניות לפי שם</button>
-                <button onClick={() => { setActiveTab('grave'); setGeneratedContent(null); }} className={`flex-1 py-4 font-bold text-center transition-all ${activeTab === 'grave' ? 'bg-gray-800 text-white' : 'text-gray-600 hover:bg-gray-200'} `}>סדר אזכרה מלא</button>
+            <div className="flex flex-col sm:flex-row bg-gray-100 border-b border-gray-200">
+                <button onClick={() => { setActiveTab('tehillim'); setGeneratedContent(null); }} className={`flex-1 py-3 md:py-4 font-bold text-center text-sm md:text-base transition-all ${activeTab === 'tehillim' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-200'} `}>תהילים לפי שם</button>
+                <button onClick={() => { setActiveTab('mishnayot'); setGeneratedContent(null); }} className={`flex-1 py-3 md:py-4 font-bold text-center text-sm md:text-base transition-all ${activeTab === 'mishnayot' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'} `}>משניות לפי שם</button>
+                <button onClick={() => { setActiveTab('grave'); setGeneratedContent(null); }} className={`flex-1 py-3 md:py-4 font-bold text-center text-sm md:text-base transition-all ${activeTab === 'grave' ? 'bg-gray-800 text-white' : 'text-gray-600 hover:bg-gray-200'} `}>סדר אזכרה מלא</button>
             </div>
 
-            <div className="p-8">
+            <div className="p-4 md:p-8">
                 {/* Visual Config Panel */}
                 <form onSubmit={handleGenerate} className="max-w-4xl mx-auto space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-orange-50 p-6 rounded-2xl border border-orange-100">

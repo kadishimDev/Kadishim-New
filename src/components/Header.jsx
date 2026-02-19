@@ -31,7 +31,7 @@ const Header = () => {
                 {/* Desktop Menu */}
                 <div className="hidden md:flex items-center gap-8">
                     <NavLink to="/" current={location.pathname}>דף הבית</NavLink>
-                    <NavLink to="/generators" current={location.pathname}>מחוללים</NavLink>
+                    <NavLink to="/generators" current={location.pathname}>יצירת תפילות</NavLink>
                     <a href="#about" className="relative group font-medium text-gray-600 hover:text-orange-600 transition-colors">
                         אודות
                         <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-orange-500 transition-all duration-300 group-hover:w-full"></span>

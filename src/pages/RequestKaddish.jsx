@@ -245,6 +245,13 @@ const RequestKaddish = () => {
                                     <p className="text-[10px] text-gray-400 mt-1">* המערכת תמיר אוטומטית בין התאריכים</p>
                                 </div>
                             </div>
+                            <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                <p className="font-medium">📌 לידיעתכם:</p>
+                                <ul className="list-disc list-inside mt-1 space-y-1 text-blue-700 text-xs">
+                                    <li>אמירת הקדיש תתבצע במשך <strong>כל שנת האבל</strong> מתאריך הפטירה.</li>
+                                    <li>תזכורת תשלח אליכם לקראת <strong>יום השנה (יארצייט)</strong> מדי שנה.</li>
+                                </ul>
+                            </div>
                         </div>
 
                         {/* Birth Date (Optional) */}

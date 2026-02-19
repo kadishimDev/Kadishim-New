@@ -111,7 +111,7 @@ const Navbar = ({ pages = [] }) => {
         const map = {
             'דף הבית': 'nav.home',
             'בקשת קדיש': 'nav.request',
-            'מחוללים': 'nav.generators',
+            'יצירת תפילות': 'nav.generators',
             'ניהול': 'nav.admin',
             'אודות': 'nav.about',
             'מי אנחנו': 'nav.about',
@@ -293,7 +293,7 @@ const Navbar = ({ pages = [] }) => {
 
                 {/* Mobile Overlay */}
                 <div className={`fixed inset-0 bg-white z-40 transition-transform duration-300 ${isOpen ? (isRtl ? 'translate-x-0' : 'translate-x-0') : (isRtl ? 'translate-x-full' : '-translate-x-full')}`}>
-                    <div className="h-full overflow-y-auto pt-24 px-6 text-dark text-center pb-24" dir={isRtl ? 'rtl' : 'ltr'}>
+                    <div className="h-full overflow-y-auto pt-32 px-6 text-dark text-center pb-24" dir={isRtl ? 'rtl' : 'ltr'}>
                         <div className="flex flex-col gap-4">
                             {menuItems.map((item) => renderMobileMenuItem(item, 0))}
 
