@@ -34,32 +34,32 @@ const SettingsManager = () => {
     const TabButton = ({ id, label, icon: Icon }) => (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition-colors ${activeTab === id
+            className={`flex items-center gap-1.5 px-3 py-3 rounded-t-lg transition-colors shrink-0 text-sm ${activeTab === id
                 ? 'bg-blue-600 text-white font-medium'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
         >
-            <Icon size={18} />
-            {label}
+            <Icon size={16} />
+            <span className="hidden sm:inline">{label}</span>
         </button>
     );
 
     return (
-        <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto" dir="rtl">
-            <h2 className="text-2xl font-bold mb-6 text-gray-800 flex items-center gap-2">
-                <Settings size={28} className="text-blue-600" />
+        <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 max-w-4xl mx-auto pb-24 md:pb-6" dir="rtl">
+            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-gray-800 flex items-center gap-2">
+                <Settings size={24} className="text-blue-600" />
                 ניהול הגדרות אתר
             </h2>
 
             {/* Tabs Navigation */}
-            <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
+            <div className="flex border-b border-gray-200 mb-4 md:mb-6 overflow-x-auto gap-1 pb-0">
                 <TabButton id="general" label="כללי" icon={Globe} />
-                <TabButton id="contact" label="יצירת קשר" icon={Smartphone} />
-                <TabButton id="social" label="מדיה חברתית" icon={Share2} />
+                <TabButton id="contact" label="קשר" icon={Smartphone} />
+                <TabButton id="social" label="סושיאל" icon={Share2} />
                 <TabButton id="analytics" label="אנליטיקס" icon={BarChart} />
                 <TabButton id="notifications" label="התראות" icon={Bell} />
                 <TabButton id="features" label="פיצ'רים" icon={Zap} />
-                <TabButton id="upress" label="שרת ואבטחה" icon={Server} />
+                <TabButton id="upress" label="שרת" icon={Server} />
             </div>
 
             {/* Content Area */}
@@ -443,28 +443,27 @@ const SettingsManager = () => {
 
             </div>
 
-            {/* Sticky Actions Footer */}
-            <div className="mt-8 pt-4 border-t flex justify-between items-center bg-white sticky bottom-0">
+            {/* Save Bar – sticky on mobile, inline on desktop */}
+            <div className="fixed md:static bottom-0 left-0 right-0 md:mt-8 bg-white md:bg-transparent border-t md:border-t-0 border-gray-200 p-4 md:p-0 flex justify-between items-center z-50 shadow-lg md:shadow-none">
                 <button
                     onClick={() => { if (window.confirm('לאפס את כל ההגדרות לברירת מחדל?')) resetSettings(); }}
                     className="text-red-500 text-sm hover:underline"
                 >
                     אפס לברירת מחדל
                 </button>
-                <div className="flex gap-3">
-                    <button
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        className={`flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition-all ${isSaving ? 'opacity-80' : ''}`}
-                    >
-                        {isSaving ? <RefreshCw className="animate-spin" size={20} /> : <Save size={20} />}
-                        {isSaving ? 'שומר...' : 'שמור שינויים'}
-                    </button>
-                </div>
+                <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className={`flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-all font-bold ${isSaving ? 'opacity-80' : ''}`}
+                >
+                    {isSaving ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
+                    {isSaving ? 'שומר...' : 'שמור שינויים'}
+                </button>
             </div>
         </div>
     );
 };
+
 
 // Simple Icon component for the header
 const Settings = ({ size, className }) => (

@@ -74,20 +74,20 @@ const YahrzeitWindow = () => {
     if (isMinimized) {
         return (
             <div
-                className="fixed bottom-4 left-4 z-[9999] bg-white rounded-full shadow-2xl border border-orange-200 p-3 cursor-pointer hover:bg-orange-50 transition-all animate-fade-in-up flex items-center gap-3 group"
+                className="fixed bottom-4 left-4 z-[9999] bg-white rounded-full shadow-2xl border border-orange-200 p-3 cursor-pointer hover:bg-orange-50 transition-all animate-fade-in-up flex items-center gap-3 group max-w-[calc(100vw-2rem)]"
                 onClick={() => setIsMinimized(false)}
                 dir="rtl"
             >
-                <div className="relative">
+                <div className="relative shrink-0">
                     <div className="absolute inset-0 bg-orange-400 rounded-full animate-ping opacity-20"></div>
                     <Flame className="text-orange-600 w-6 h-6 animate-pulse" fill="#ea580c" />
                     <div className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold shadow-sm">
                         {todaysNames.length}
                     </div>
                 </div>
-                <div className="flex flex-col">
-                    <span className="font-bold text-gray-900 text-sm leading-tight">היום באזכרה</span>
-                    <span className="text-[10px] text-gray-500">{gematriya(currentHDate.getDate())} ב{currentHDate.getMonthName('h')}</span>
+                <div className="flex flex-col min-w-0">
+                    <span className="font-bold text-gray-900 text-sm leading-tight truncate">היום באזכרה</span>
+                    <span className="text-[10px] text-gray-500 truncate">{gematriya(currentHDate.getDate())} ב{currentHDate.getMonthName('h')}</span>
                 </div>
             </div>
         );
@@ -96,9 +96,9 @@ const YahrzeitWindow = () => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed bottom-4 left-4 z-[9999] w-80 bg-white rounded-2xl shadow-2xl border-t-4 border-orange-500 overflow-hidden animate-slide-up ring-1 ring-black/5" dir="rtl">
+        <div className="fixed bottom-4 left-4 right-4 md:right-auto md:w-80 z-[9999] bg-white rounded-2xl shadow-2xl border-t-4 border-orange-500 overflow-hidden animate-slide-up ring-1 ring-black/5 mx-auto md:mx-0 max-w-sm" dir="rtl">
             {/* Header */}
-            <div className="bg-orange-50/50 p-4 border-b border-orange-100 flex justify-between items-center relative overflow-hidden">
+            <div className="bg-orange-50/50 p-3 md:p-4 border-b border-orange-100 flex justify-between items-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-16 h-16 bg-orange-200/20 rounded-full blur-xl -translate-y-1/2 translate-x-1/2"></div>
 
                 <div className="flex items-center gap-3 relative z-10">
@@ -132,12 +132,12 @@ const YahrzeitWindow = () => {
             </div>
 
             {/* List */}
-            <div className="max-h-[300px] overflow-y-auto custom-scrollbar bg-white">
+            <div className="max-h-[250px] md:max-h-[300px] overflow-y-auto custom-scrollbar bg-white">
                 {todaysNames.length > 0 ? (
                     <div className="divide-y divide-gray-50">
                         {todaysNames.map((item, idx) => (
-                            <div key={idx} className="p-4 hover:bg-orange-50/30 transition-colors flex items-center gap-3 group">
-                                <div className="w-10 h-10 shrink-0 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 font-serif text-xs border border-gray-100 group-hover:border-orange-200 group-hover:bg-white group-hover:text-orange-600 group-hover:shadow-sm transition-all">
+                            <div key={idx} className="p-3 md:p-4 hover:bg-orange-50/30 transition-colors flex items-center gap-3 group">
+                                <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 font-serif text-xs border border-gray-100 group-hover:border-orange-200 group-hover:bg-white group-hover:text-orange-600 group-hover:shadow-sm transition-all">
                                     ז"ל
                                 </div>
                                 <div className="min-w-0">

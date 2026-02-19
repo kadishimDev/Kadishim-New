@@ -28,7 +28,7 @@ const DashboardHome = ({ memorials, pages, onUpdate }) => {
             <h2 className="text-3xl font-bold text-gray-800">לוח בקרה</h2>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard title="סה&quot;כ אזכרות" value={stats.total} icon={Users} color="bg-blue-50 text-blue-600" />
                 <StatCard title="נוספו היום" value={stats.newToday} icon={TrendingUp} color="bg-green-50 text-green-600" />
                 <StatCard title="אזכרות החודש" value={stats.upcoming} icon={Calendar} color="bg-orange-50 text-orange-600" />

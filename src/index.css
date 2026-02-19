@@ -219,3 +219,33 @@
   margin-right: 0;
   margin-left: 15px;
 }
+
+/* Google Translate Widget Hiding */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-gadget-simple,
+.goog-tooltip,
+.goog-te-balloon-frame {
+  display: none !important;
+}
+
+body {
+  top: 0px !important;
+}
+
+#google_translate_element {
+  /* Ensure it has no size but exists for DOM manipulation */
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  /* Do not use negative values that cause scrollbar */
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  z-index: -1;
+}
+
+font {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}

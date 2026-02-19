@@ -21,6 +21,30 @@ const Navbar = ({ pages = [] }) => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // Lock body scroll when mobile menu is open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isOpen]);
+
+    // Lock body scroll when mobile menu is open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isOpen]);
+
     // ... (keep existing visibility logic) ...
     const isPathVisible = (path) => {
         if (path === '/') {
@@ -81,7 +105,8 @@ const Navbar = ({ pages = [] }) => {
 
     // Helper to translate menu items
     // Tries to map known Hebrew names to translation keys
-    const translateItem = (name) => {
+    const translateItem = (rawName) => {
+        const name = rawName ? rawName.trim() : '';
         // Only map items that actually exist in translation files
         const map = {
             'דף הבית': 'nav.home',
@@ -89,10 +114,17 @@ const Navbar = ({ pages = [] }) => {
             'מחוללים': 'nav.generators',
             'ניהול': 'nav.admin',
             'אודות': 'nav.about',
-            'צור קשר': 'nav.contact'
+            'מי אנחנו': 'nav.about',
+            'צור קשר': 'nav.contact',
+            'ספריית הקדיש': 'nav.library',
+            'מידע והלכה': 'nav.info',
+            'תפילות לפי שם': 'nav.prayers_by_name',
+            'שירותים רוחניים': 'nav.spiritual_services',
+            'שירותים נוספים': 'nav.additional_services',
+            'תרומות': 'nav.donate'
         };
         // If no translation key exists, show the Hebrew name as-is
-        return map[name] ? t(map[name]) : name;
+        return map[name] ? t(map[name]) : rawName;
     };
 
     const renderMobileMenuItem = (item, level = 0) => {
@@ -261,7 +293,7 @@ const Navbar = ({ pages = [] }) => {
 
                 {/* Mobile Overlay */}
                 <div className={`fixed inset-0 bg-white z-40 transition-transform duration-300 ${isOpen ? (isRtl ? 'translate-x-0' : 'translate-x-0') : (isRtl ? 'translate-x-full' : '-translate-x-full')}`}>
-                    <div className="h-full overflow-y-auto pt-24 px-6 text-dark text-center pb-10" dir={isRtl ? 'rtl' : 'ltr'}>
+                    <div className="h-full overflow-y-auto pt-24 px-6 text-dark text-center pb-24" dir={isRtl ? 'rtl' : 'ltr'}>
                         <div className="flex flex-col gap-4">
                             {menuItems.map((item) => renderMobileMenuItem(item, 0))}
 
@@ -277,7 +309,7 @@ const Navbar = ({ pages = [] }) => {
                         </div>
 
                         <div className="mt-6 flex justify-center">
-                            <LanguageSwitcher />
+                            <LanguageSwitcher dropUp={true} />
                         </div>
                     </div>
                 </div>

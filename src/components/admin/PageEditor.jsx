@@ -284,6 +284,7 @@ const PageEditor = ({ pages, onUpdate }) => {
     const [isCreating, setIsCreating] = useState(false);
     const [newPageTitle, setNewPageTitle] = useState('');
     const [isEditingStructure, setIsEditingStructure] = useState(false); // Structure Edit Mode
+    const [mobileTab, setMobileTab] = useState('pages'); // 'pages' | 'editor' | 'preview'
 
     // Handlers
     const handleSelect = (page) => {
@@ -294,6 +295,8 @@ const PageEditor = ({ pages, onUpdate }) => {
         setSelectedPage(pageToSelect);
         // Ensure legacy pages have isVisible property
         setEditForm({ ...pageToSelect, isVisible: pageToSelect.isVisible !== undefined ? pageToSelect.isVisible : true });
+        // On mobile, auto-navigate to editor tab
+        setMobileTab('editor');
     };
 
     const handleChange = (e) => {
@@ -560,9 +563,32 @@ const PageEditor = ({ pages, onUpdate }) => {
     };
 
     return (
-        <div className="flex h-[calc(100vh-140px)] gap-6 bg-gray-50/50 p-2 rounded-xl">
+        <div className="flex flex-col md:flex-row md:h-[calc(100vh-140px)] gap-0 md:gap-6 bg-gray-50/50 md:p-2 rounded-xl">
+
+            {/* Mobile Tab Bar */}
+            <div className="md:hidden flex border-b border-gray-200 bg-white rounded-t-xl overflow-hidden shrink-0">
+                {[
+                    { id: 'pages', label: 'עמודים', icon: Layout },
+                    { id: 'editor', label: 'עריכה', icon: Edit2 },
+                    { id: 'preview', label: 'תצוגה', icon: Eye },
+                ].map(({ id, label, icon: Icon }) => (
+                    <button
+                        key={id}
+                        onClick={() => setMobileTab(id)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-bold transition-colors ${mobileTab === id
+                            ? 'bg-primary text-white'
+                            : 'text-gray-500 hover:bg-gray-50'
+                            }`}
+                    >
+                        <Icon size={16} />
+                        {label}
+                    </button>
+                ))}
+            </div>
+
             {/* Sidebar - Site Tree */}
-            <div className="w-80 flex-shrink-0 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
+            <div className={`md:w-80 md:flex-shrink-0 bg-white md:rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden ${mobileTab === 'pages' ? 'flex' : 'hidden md:flex'
+                }`}>
                 <div className="p-4 border-b bg-gray-50/50 flex justify-between items-center">
                     <div>
                         <h3 className="font-bold text-gray-700 flex items-center gap-2">
@@ -649,14 +675,21 @@ const PageEditor = ({ pages, onUpdate }) => {
             </div>
 
             {/* Main Editor Area */}
-            <div className="flex-1 flex flex-col bg-gray-100/50 rounded-2xl border border-gray-200 overflow-hidden relative" key={selectedPage?.slug || selectedPage?.pathIndices?.join('-') || 'empty'}>
+            <div className={`flex-1 flex flex-col bg-gray-100/50 md:rounded-2xl border border-gray-200 overflow-hidden relative ${mobileTab === 'pages' ? 'hidden md:flex' : 'flex'
+                }`} key={selectedPage?.slug || selectedPage?.pathIndices?.join('-') || 'empty'}>
                 {!selectedPage ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-6">
                         <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
                             <Layout size={40} className="opacity-20" />
                         </div>
                         <h2 className="text-xl font-bold text-gray-500 mb-2">עורך ה-CMS החדש</h2>
-                        <p className="max-w-md text-center text-sm">בחר עמוד מהרשימה או צור עמוד חדש כדי להתחיל.</p>
+                        <p className="max-w-md text-center text-sm mb-4">בחר עמוד מהרשימה או צור עמוד חדש כדי להתחיל.</p>
+                        <button
+                            onClick={() => setMobileTab('pages')}
+                            className="md:hidden px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm"
+                        >
+                            לרשימת העמודים
+                        </button>
                     </div>
                 ) : selectedPage.type === 'menu-node' ? (
                     // --- MENU NODE EDITOR ---
@@ -844,7 +877,11 @@ const PageEditor = ({ pages, onUpdate }) => {
 
                         {/* Split View Container */}
                         <div className="flex-1 flex overflow-hidden relative bg-gray-100">
-                            <div className={`transition-all duration-300 overflow-y-auto p-8 flex justify-center ${showPreview ? 'w-1/2 border-l border-gray-200' : 'w-full'}`}>
+                            {/* Editor pane: hidden on mobile when preview tab active */}
+                            <div className={`transition-all duration-300 overflow-y-auto p-4 md:p-8 flex justify-center ${mobileTab === 'preview'
+                                ? 'hidden md:flex md:w-1/2 md:border-l md:border-gray-200'
+                                : showPreview ? 'w-full md:w-1/2 border-l border-gray-200' : 'w-full'
+                                }`}>
                                 <div className="w-full max-w-3xl bg-white shadow-sm rounded-xl min-h-[500px] flex flex-col">
                                     <ReactQuill
                                         theme="snow"
@@ -857,9 +894,10 @@ const PageEditor = ({ pages, onUpdate }) => {
                                 </div>
                             </div>
 
-                            {/* Preview Pane - Internal */}
-                            {showPreview && (
-                                <div className="w-1/2 flex flex-col bg-gray-200 border-r border-gray-200 shadow-inner">
+                            {/* Preview Pane: full screen on mobile 'preview' tab, or split on desktop */}
+                            {(showPreview || mobileTab === 'preview') && (
+                                <div className={`flex flex-col bg-gray-200 border-r border-gray-200 shadow-inner ${mobileTab === 'preview' ? 'flex-1' : 'w-1/2'
+                                    }`}>
                                     <div className="p-2 bg-white border-b border-gray-200 flex justify-between items-center text-xs text-gray-400">
                                         <span className="font-mono">תצוגה מקדימה ({viewMode})</span>
                                         <div className="flex gap-1 bg-gray-100 p-0.5 rounded">

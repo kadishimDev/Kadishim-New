@@ -16,6 +16,7 @@ const MissionControl = ({ onNavigate }) => {
 
     const [scanning, setScanning] = useState(false);
     const [processing, setProcessing] = useState(false);
+    const [showTerminal, setShowTerminal] = useState(false); // Mobile: terminal collapsed by default
 
     // State for Chat & Logs
     const [logs, setLogs] = useState([]);
@@ -255,22 +256,28 @@ const MissionControl = ({ onNavigate }) => {
     }, []);
 
     return (
-        <div className="space-y-6 text-slate-800 animate-fade-in h-[calc(100vh-100px)] flex flex-col" dir="rtl">
+        <div className="space-y-4 text-slate-800 animate-fade-in flex flex-col" dir="rtl">
             {/* Header */}
-            <div className="bg-slate-900 text-white p-4 rounded-xl shadow-xl flex justify-between items-center relative overflow-hidden shrink-0">
+            <div className="bg-slate-900 text-white p-3 md:p-4 rounded-xl shadow-xl flex justify-between items-center relative overflow-hidden shrink-0">
                 <div className="absolute inset-0 bg-grid-slate-800/50 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))]"></div>
                 <div className="relative z-10 flex items-center gap-3">
-                    <Shield className="text-blue-400" size={28} />
+                    <Shield className="text-blue-400" size={24} />
                     <div>
-                        <h1 className="text-2xl font-bold">Mission Control</h1>
+                        <h1 className="text-lg md:text-2xl font-bold">Mission Control</h1>
                         <p className="text-slate-400 font-mono text-xs">System Architect AI ({modelName}) 🟢</p>
                     </div>
                 </div>
-                <div className="relative z-10 flex gap-4">
+                <div className="relative z-10 flex gap-2">
+                    <button
+                        onClick={() => setShowTerminal(v => !v)}
+                        className="md:hidden px-3 py-2 rounded-lg font-bold flex items-center gap-1 text-xs bg-slate-700 hover:bg-slate-600"
+                    >
+                        <Terminal size={14} /> לוג
+                    </button>
                     <button
                         onClick={runScan}
                         disabled={scanning}
-                        className={`px-4 py-2 rounded-lg font-bold flex items-center gap-2 text-sm ${scanning ? 'bg-slate-700' : 'bg-blue-600 hover:bg-blue-500'}`}
+                        className={`px-3 md:px-4 py-2 rounded-lg font-bold flex items-center gap-2 text-sm ${scanning ? 'bg-slate-700' : 'bg-blue-600 hover:bg-blue-500'}`}
                     >
                         {scanning ? <Activity className="animate-spin" size={16} /> : <Play size={16} />}
                         {scanning ? 'סורק...' : 'סריקה'}
@@ -336,10 +343,10 @@ const MissionControl = ({ onNavigate }) => {
                 </div>
             </div>
 
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
+            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
 
-                {/* Left Col: Chat Interface (Takes up 2/3) */}
-                <div className="lg:col-span-2 flex flex-col gap-4 h-full min-h-0">
+                {/* Left Col: Chat Interface */}
+                <div className="flex-1 flex flex-col gap-4 min-h-0">
 
                     {/* Chat Window */}
                     <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden relative">
@@ -394,7 +401,7 @@ const MissionControl = ({ onNavigate }) => {
                     </div>
 
                     {/* Quick Stats (Interactive) */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 h-24">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
                         <AgentCard onClick={() => handleCardClick('infrastructure')} title="תשתיות" icon={<Database size={16} />} data={results?.infrastructure} color="blue" />
                         <AgentCard onClick={() => handleCardClick('visual')} title="עיצוב" icon={<Eye size={16} />} data={results?.visual} color="purple" />
                         <AgentCard onClick={() => handleCardClick('content')} title="תוכן" icon={<FileText size={16} />} data={results?.content} color="emerald" />
@@ -402,8 +409,8 @@ const MissionControl = ({ onNavigate }) => {
                     </div>
                 </div>
 
-                {/* Right Col: Terminal Log (Sidebar) */}
-                <div className="bg-black rounded-xl p-3 font-mono text-xs shadow-xl border border-slate-800 flex flex-col h-full overflow-hidden min-h-0">
+                {/* Right Col: Terminal Log */}
+                <div className={`bg-black rounded-xl p-3 font-mono text-xs shadow-xl border border-slate-800 flex flex-col overflow-hidden min-h-0 lg:h-auto ${showTerminal ? 'h-64' : 'hidden lg:flex'}`}>
                     <div className="flex items-center gap-2 text-slate-400 border-b border-slate-800 pb-2 mb-2 shrink-0">
                         <Terminal size={12} />
                         <span>TERMINAL LOG</span>

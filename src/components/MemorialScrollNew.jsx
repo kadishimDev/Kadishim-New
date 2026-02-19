@@ -98,22 +98,22 @@ const MemorialScroll = () => {
     }, [memorials]);
 
     return (
-        <div id="memorial-scroll-container" className="w-full bg-black text-white border-y-4 border-primary/20 shadow-2xl overflow-hidden font-sans relative flex items-center h-48 md:h-32" dir="rtl">
+        <div id="memorial-scroll-container" className="w-full bg-black text-white border-y-4 border-primary/20 shadow-2xl overflow-hidden font-sans relative flex items-center h-24 md:h-32" dir="rtl">
 
             {/* Candle Overlay (Fixed Right) */}
-            <div className="absolute right-0 top-0 bottom-0 z-20 flex flex-col items-center justify-center bg-black px-4 md:px-6 shadow-[0_0_50px_black] border-l border-white/10 min-w-[160px] md:min-w-[200px]">
-                <div className="relative mb-2">
-                    <Flame size={32} className="text-orange-500 animate-pulse filter drop-shadow-[0_0_15px_rgba(255,140,0,0.8)]" />
+            <div className="absolute right-0 top-0 bottom-0 z-20 flex flex-col items-center justify-center bg-black px-2 md:px-6 shadow-[0_0_50px_black] border-l border-white/10 min-w-[100px] md:min-w-[200px]">
+                <div className="relative mb-1 md:mb-2">
+                    <Flame className="w-6 h-6 md:w-8 md:h-8 text-orange-500 animate-pulse filter drop-shadow-[0_0_15px_rgba(255,140,0,0.8)]" />
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-orange-300 rounded-full blur-md animate-bounce opacity-50"></div>
                 </div>
                 <div className="text-center">
-                    <h3 className="text-primary font-bold text-lg md:text-xl leading-none mb-1">נר לזכרם</h3>
-                    <div className="text-sm font-medium text-gray-400">{currentHebrewDate}</div>
+                    <h3 className="text-primary font-bold text-sm md:text-xl leading-none mb-1">נר לזכרם</h3>
+                    <div className="text-[10px] md:text-sm font-medium text-gray-400">{currentHebrewDate}</div>
                 </div>
             </div>
 
             {/* Scroll Container */}
-            <div className="flex-1 overflow-hidden h-full relative mask-fade-left bg-zinc-900/40 flex items-center pr-[160px] md:pr-[200px]" dir="ltr">
+            <div className="flex-1 overflow-hidden h-full relative mask-fade-left bg-zinc-900/40 flex items-center pr-[100px] md:pr-[200px]" dir="ltr">
                 {items.length > 0 ? (
                     <div className="flex h-full items-center animate-scroll-slow w-max flex-row-reverse">
                         <div className="flex items-center shrink-0">
@@ -128,7 +128,7 @@ const MemorialScroll = () => {
                         </div>
                     </div>
                 ) : (
-                    <div className="w-full text-center text-gray-500 italic pr-[200px]" dir="rtl">
+                    <div className="w-full text-center text-gray-500 italic pr-[100px] md:pr-[200px]" dir="rtl">
                         אין אזכרות היום.
                     </div>
                 )}

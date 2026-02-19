@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import ContactForm from '../components/ContactForm';
+import SegulotPage from './SegulotPage';
 
 const ContentPage = ({ pages = [] }) => {
     const { slug } = useParams();
@@ -63,7 +64,7 @@ const ContentPage = ({ pages = [] }) => {
             return (
                 <div>
                     <div
-                        className="prose prose-lg max-w-none text-gray-700 leading-relaxed font-sans"
+                        className="prose prose-lg max-w-none text-gray-700 leading-relaxed font-sans prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight prose-p:text-gray-700 prose-a:text-primary prose-a:no-underline prose-a:font-bold hover:prose-a:underline prose-a:transition-colors prose-li:marker:text-primary prose-strong:text-gray-900 prose-strong:font-bold"
                         dangerouslySetInnerHTML={{ __html: parts[0] }}
                     ></div>
 
@@ -71,7 +72,7 @@ const ContentPage = ({ pages = [] }) => {
 
                     {parts[1] && (
                         <div
-                            className="prose prose-lg max-w-none text-gray-700 leading-relaxed font-sans mt-8"
+                            className="prose prose-lg max-w-none text-gray-700 leading-relaxed font-sans mt-8 prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight prose-p:text-gray-700 prose-a:text-primary prose-a:no-underline prose-a:font-bold hover:prose-a:underline prose-a:transition-colors prose-li:marker:text-primary prose-strong:text-gray-900 prose-strong:font-bold"
                             dangerouslySetInnerHTML={{ __html: parts[1] }}
                         ></div>
                     )}
@@ -82,11 +83,16 @@ const ContentPage = ({ pages = [] }) => {
         // Default rendering
         return (
             <div
-                className="prose prose-lg max-w-none text-gray-700 leading-relaxed font-sans"
+                className="prose prose-lg max-w-none text-gray-700 leading-relaxed font-sans prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight prose-p:text-gray-700 prose-a:text-primary prose-a:no-underline prose-a:font-bold hover:prose-a:underline prose-a:transition-colors prose-li:marker:text-primary prose-strong:text-gray-900 prose-strong:font-bold"
                 dangerouslySetInnerHTML={{ __html: htmlContent }}
             ></div>
         );
     };
+
+    // Special Route for Segulot Page
+    if (slug === 'סגולות-לעילוי-נשמה') {
+        return <SegulotPage />;
+    }
 
     return (
         <div className="container mx-auto px-4 py-12 pt-0 max-w-4xl">

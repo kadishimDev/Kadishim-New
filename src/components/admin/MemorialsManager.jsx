@@ -204,19 +204,18 @@ const MemorialsManager = ({ memorials, onUpdate, initialParams }) => {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-800">ניהול אזכרות</h2>
-                {/* Simulated Action */}
+        <div className="space-y-4 animate-fade-in">
+            <div className="flex flex-wrap gap-2 justify-between items-center">
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800">ניהול אזכרות</h2>
                 <div className="flex gap-2">
                     <button
                         onClick={handleExportCSV}
-                        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition-all shadow-sm"
+                        className="flex items-center gap-1.5 bg-green-600 text-white px-3 py-2 rounded-lg font-bold hover:bg-green-700 transition-all shadow-sm text-sm"
                     >
-                        <Download size={18} /> ייצוא לאקסל
+                        <Download size={16} /> ייצוא
                     </button>
-                    <button className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-800 transition-all shadow-sm">
-                        <UserPlus size={18} /> הוסף ידני
+                    <button className="flex items-center gap-1.5 bg-black text-white px-3 py-2 rounded-lg font-bold hover:bg-gray-800 transition-all shadow-sm text-sm">
+                        <UserPlus size={16} /> הוסף
                     </button>
                 </div>
             </div>
@@ -284,8 +283,8 @@ const MemorialsManager = ({ memorials, onUpdate, initialParams }) => {
             {/* Popup */}
             {popupItem && <DeceasedPopup data={popupItem} onClose={() => setPopupItem(null)} onUpdate={onUpdate} />}
 
-            {/* Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* Desktop Table */}
+            <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-right border-collapse">
                         <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
@@ -307,7 +306,6 @@ const MemorialsManager = ({ memorials, onUpdate, initialParams }) => {
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {currentData.map(item => {
-                                // DB Keys Priority
                                 const name = item.deceased_name || item.name;
                                 const hDate = item.death_date_hebrew || item.hebrew_date_text;
                                 const gDate = item.death_date_gregorian || item.gregorian_date;
@@ -316,9 +314,7 @@ const MemorialsManager = ({ memorials, onUpdate, initialParams }) => {
                                 return (
                                     <tr
                                         key={item.id}
-                                        onClick={() => {
-                                            setPopupItem(item);
-                                        }}
+                                        onClick={() => setPopupItem(item)}
                                         className={`hover:bg-blue-50/50 transition-colors group cursor-pointer ${isMissingData ? 'bg-red-50/10' : ''}`}
                                     >
                                         <td className="p-4 font-mono text-gray-400 text-sm">#{item.id}</td>
@@ -327,8 +323,6 @@ const MemorialsManager = ({ memorials, onUpdate, initialParams }) => {
                                             <div className="flex flex-wrap gap-1 mt-1">
                                                 {item.father_name && <span className="text-xs font-normal text-gray-500 bg-gray-100 px-1 rounded">בן/בת {item.father_name}</span>}
                                             </div>
-
-                                            {/* Missing Data Badges */}
                                             {(() => {
                                                 const missing = getMissingFields(item);
                                                 if (missing.length === 0) return null;
@@ -362,7 +356,6 @@ const MemorialsManager = ({ memorials, onUpdate, initialParams }) => {
                     </table>
                 </div>
 
-
                 {/* Pagination */}
                 <div className="p-4 border-t border-gray-100 flex justify-between items-center bg-gray-50">
                     <button
@@ -381,6 +374,72 @@ const MemorialsManager = ({ memorials, onUpdate, initialParams }) => {
                         className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors"
                     >
                         <ChevronLeft size={18} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+                {currentData.map(item => {
+                    const name = item.deceased_name || item.name;
+                    const hDate = item.death_date_hebrew || item.hebrew_date_text;
+                    const gDate = item.death_date_gregorian || item.gregorian_date;
+                    const missing = getMissingFields(item);
+
+                    return (
+                        <div
+                            key={item.id}
+                            onClick={() => setPopupItem(item)}
+                            className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 cursor-pointer active:bg-blue-50 transition-colors"
+                        >
+                            <div className="flex justify-between items-start">
+                                <div className="flex-1 min-w-0">
+                                    <div className="font-bold text-gray-800 text-base truncate">{name}</div>
+                                    {item.father_name && (
+                                        <div className="text-sm text-gray-500 mt-0.5">בן/בת {item.father_name}</div>
+                                    )}
+                                    <div className="text-sm text-gray-600 mt-1">{hDate || '-'}</div>
+                                    {gDate && <div className="text-xs text-gray-400 font-mono">{gDate}</div>}
+                                </div>
+                                <div className="flex flex-col items-end gap-2 mr-3">
+                                    <span className="text-xs text-gray-400 font-mono">#{item.id}</span>
+                                    <button className="text-primary bg-orange-50 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1">
+                                        <Eye size={14} /> צפה
+                                    </button>
+                                </div>
+                            </div>
+                            {missing.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                    {missing.slice(0, 3).map(field => (
+                                        <span key={field} className="text-[10px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-100">
+                                            חסר: {field}
+                                        </span>
+                                    ))}
+                                    {missing.length > 3 && (
+                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">+{missing.length - 3} נוספים</span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+
+                {/* Mobile Pagination */}
+                <div className="flex justify-between items-center pt-2">
+                    <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-50 text-sm font-bold"
+                    >
+                        הקודם
+                    </button>
+                    <span className="font-bold text-gray-600 text-sm">{currentPage} / {totalPages}</span>
+                    <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-50 text-sm font-bold"
+                    >
+                        הבא
                     </button>
                 </div>
             </div>

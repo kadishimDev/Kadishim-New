@@ -11,6 +11,8 @@ import ContentPage from './pages/ContentPage';
 import ErrorBoundary from './components/ErrorBoundary';
 
 import ScrollToTop from './components/ScrollToTop';
+import GoogleTranslate from './components/GoogleTranslate';
+// import DebugGoogleTranslate from './components/DebugGoogleTranslate';
 import ContactActions from './components/ContactActions';
 import { Analytics } from './services/analytics';
 import AccessibilityWidget from './components/AccessibilityWidget';
@@ -116,6 +118,7 @@ const App = () => {
   return (
     <SettingsProvider>
       <LanguageProvider>
+        <GoogleTranslate />
         <DataProvider>
           <Router>
             <ScrollToTop />
